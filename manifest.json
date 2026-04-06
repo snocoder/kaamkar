@@ -1,0 +1,10 @@
+{
+  "name": "KaamKar",
+  "short_name": "KaamKar",
+  "description": "Run your business, not paperwork",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#1e40af",
+  "icons": []
+}

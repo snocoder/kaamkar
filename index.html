@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1e40af">
+  <title>KaamKar</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ========== ROLE SELECT ========== -->
+    <div id="screen-role-select" class="screen active">
+      <div class="onboard-container">
+        <div class="onboard-logo">
+          <div class="logo-icon">K</div>
+          <h1>KaamKar</h1>
+          <p class="tagline">Run your business, not paperwork</p>
+        </div>
+        <div class="role-cards">
+          <button class="role-card" id="role-owner">
+            <div class="role-card-icon">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <h3>Business Owner</h3>
+            <p>Manage employees, attendance, tasks & reports</p>
+          </button>
+          <button class="role-card" id="role-employee">
+            <div class="role-card-icon employee-icon">
+              <svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <h3>Employee</h3>
+            <p>View tasks, attendance & request leaves</p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== OWNER ONBOARDING ========== -->
+    <div id="screen-onboard-phone" class="screen">
+      <div class="onboard-container">
+        <button class="back-btn" data-back="screen-role-select">&larr;</button>
+        <div class="onboard-logo small">
+          <h2>Owner Login</h2>
+          <p class="subtitle">Enter your phone number</p>
+        </div>
+        <div class="onboard-form">
+          <div class="phone-input-group">
+            <span class="country-code">+91</span>
+            <input type="tel" id="phone-input" maxlength="10" placeholder="98765 43210" inputmode="numeric">
+          </div>
+          <button class="btn btn-primary btn-full" id="btn-send-otp" disabled>Send OTP</button>
+        </div>
+        <p class="onboard-footer">By continuing, you agree to our Terms of Service</p>
+      </div>
+    </div>
+
+    <div id="screen-onboard-otp" class="screen">
+      <div class="onboard-container">
+        <button class="back-btn" data-back="screen-onboard-phone">&larr;</button>
+        <div class="onboard-logo small">
+          <h2>Verify OTP</h2>
+          <p class="subtitle" id="otp-subtitle">Sent to +91 98765 43210</p>
+        </div>
+        <div class="onboard-form">
+          <div class="otp-inputs">
+            <input type="tel" maxlength="1" class="otp-box" inputmode="numeric">
+            <input type="tel" maxlength="1" class="otp-box" inputmode="numeric">
+            <input type="tel" maxlength="1" class="otp-box" inputmode="numeric">
+            <input type="tel" maxlength="1" class="otp-box" inputmode="numeric">
+          </div>
+          <button class="btn btn-primary btn-full" id="btn-verify-otp" disabled>Verify</button>
+          <p class="resend-text">Didn't receive? <a href="#" id="resend-otp">Resend OTP</a></p>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-onboard-business" class="screen">
+      <div class="onboard-container">
+        <div class="onboard-logo small">
+          <h2>Almost there!</h2>
+          <p class="subtitle">Tell us about your business</p>
+        </div>
+        <div class="onboard-form">
+          <label class="input-label">Business Name</label>
+          <input type="text" id="business-name" class="text-input" placeholder="e.g. Sharma Electronics">
+          <label class="input-label">Your Name</label>
+          <input type="text" id="owner-name" class="text-input" placeholder="e.g. Rajesh Sharma">
+          <button class="btn btn-primary btn-full" id="btn-start" disabled>Start Using KaamKar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== EMPLOYEE LOGIN ========== -->
+    <div id="screen-emp-login" class="screen">
+      <div class="onboard-container">
+        <button class="back-btn" data-back="screen-role-select">&larr;</button>
+        <div class="onboard-logo small">
+          <h2>Employee Login</h2>
+          <p class="subtitle">Enter your phone number to find your account</p>
+        </div>
+        <div class="onboard-form">
+          <div class="phone-input-group">
+            <span class="country-code">+91</span>
+            <input type="tel" id="emp-login-phone" maxlength="10" placeholder="Your registered phone" inputmode="numeric">
+          </div>
+          <button class="btn btn-primary btn-full" id="btn-emp-login" disabled>Continue</button>
+          <div id="emp-login-error" class="error-msg" style="display:none">
+            No account found. Please ask your employer to add you first.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== OWNER MAIN APP ========== -->
+    <div id="screen-main" class="screen">
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <span class="business-name-display" id="header-business-name">My Business</span>
+        </div>
+        <div class="top-bar-right">
+          <button class="icon-btn" id="btn-settings" aria-label="Settings">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="tab-content">
+        <!-- EMPLOYEES TAB -->
+        <div id="tab-employees" class="tab-panel active">
+          <div id="employees-empty" class="empty-state">
+            <div class="empty-icon"><svg width="64" height="64" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+            <h3>No employees yet</h3>
+            <p>Add your first employee to get started</p>
+            <button class="btn btn-primary" id="btn-add-first-emp">+ Add Employee</button>
+          </div>
+          <div id="employees-list-container" class="list-container" style="display:none">
+            <div class="list-header">
+              <span class="list-count" id="emp-count">0 employees</span>
+              <div class="search-bar">
+                <svg width="16" height="16" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                <input type="text" id="emp-search" placeholder="Search employees...">
+              </div>
+            </div>
+            <div id="employees-list" class="card-list"></div>
+            <button class="fab" id="btn-add-emp" aria-label="Add Employee"><svg width="24" height="24" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+          </div>
+        </div>
+
+        <!-- ATTENDANCE TAB -->
+        <div id="tab-attendance" class="tab-panel">
+          <div id="attendance-empty" class="empty-state">
+            <div class="empty-icon"><svg width="64" height="64" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+            <h3>No employees to track</h3>
+            <p>Add employees first to mark attendance</p>
+          </div>
+          <div id="attendance-content" style="display:none">
+            <div class="sub-tabs">
+              <button class="sub-tab active" data-subtab="daily-att">Daily Attendance</button>
+              <button class="sub-tab" data-subtab="leaves">Leave Requests</button>
+            </div>
+            <div id="subtab-daily-att" class="sub-panel active">
+              <div class="attendance-header">
+                <button class="date-nav-btn" id="att-prev-day">&larr;</button>
+                <div class="date-display" id="att-date-tap">
+                  <span class="date-main" id="att-date-display">Today</span>
+                  <span class="date-sub" id="att-date-sub">6 Apr 2026</span>
+                </div>
+                <button class="date-nav-btn" id="att-next-day">&rarr;</button>
+              </div>
+              <!-- Hidden date picker triggered by tapping date -->
+              <input type="date" id="att-date-picker" class="hidden-date-picker">
+              <div class="attendance-progress">
+                <div class="progress-bar"><div class="progress-fill" id="att-progress-fill" style="width:0%"></div></div>
+                <span class="progress-text" id="att-progress-text">0 of 0 marked</span>
+              </div>
+              <div id="attendance-list" class="attendance-list"></div>
+            </div>
+            <div id="subtab-leaves" class="sub-panel">
+              <div id="leaves-empty" class="empty-state-inline">
+                <p>No leave requests yet</p>
+              </div>
+              <div id="leaves-list-container" style="display:none">
+                <div class="leave-filters">
+                  <button class="filter-chip active" data-leave-filter="all">All</button>
+                  <button class="filter-chip" data-leave-filter="pending">Pending</button>
+                  <button class="filter-chip" data-leave-filter="approved">Approved</button>
+                  <button class="filter-chip" data-leave-filter="rejected">Rejected</button>
+                </div>
+                <div id="leaves-list" class="card-list"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TASKS TAB -->
+        <div id="tab-tasks" class="tab-panel">
+          <div id="tasks-empty" class="empty-state">
+            <div class="empty-icon"><svg width="64" height="64" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+            <h3>No tasks yet</h3>
+            <p>Create your first task to assign work</p>
+            <button class="btn btn-primary" id="btn-add-first-task">+ Create Task</button>
+          </div>
+          <div id="tasks-list-container" class="list-container" style="display:none">
+            <div class="task-filters">
+              <button class="filter-chip active" data-filter="all">All</button>
+              <button class="filter-chip" data-filter="pending">Pending</button>
+              <button class="filter-chip" data-filter="done">Done</button>
+              <button class="filter-chip" data-filter="overdue">Overdue</button>
+            </div>
+            <div id="tasks-list" class="card-list"></div>
+            <button class="fab" id="btn-add-task" aria-label="Create Task"><svg width="24" height="24" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+          </div>
+        </div>
+
+        <!-- REPORTS TAB - Redesigned -->
+        <div id="tab-reports" class="tab-panel">
+          <div class="reports-container">
+            <div class="summary-grid">
+              <div class="summary-card"><span class="summary-number" id="summary-employees">0</span><span class="summary-label">Employees</span></div>
+              <div class="summary-card"><span class="summary-number" id="summary-present">0</span><span class="summary-label">Present Today</span></div>
+              <div class="summary-card"><span class="summary-number" id="summary-tasks-pending">0</span><span class="summary-label">Tasks Pending</span></div>
+              <div class="summary-card"><span class="summary-number" id="summary-tasks-overdue">0</span><span class="summary-label">Overdue</span></div>
+            </div>
+
+            <h3 class="section-title" style="margin-top:20px;">Download Reports</h3>
+            <!-- Report type selector -->
+            <div class="report-type-tabs">
+              <button class="report-type-tab active" data-report="attendance">Attendance</button>
+              <button class="report-type-tab" data-report="wages">Wages</button>
+              <button class="report-type-tab" data-report="employees">Employees</button>
+              <button class="report-type-tab" data-report="leaves">Leaves</button>
+            </div>
+
+            <!-- Report panels -->
+            <div class="report-panel-container">
+              <div id="report-attendance" class="report-panel active">
+                <div class="report-filters-card">
+                  <label class="filter-label">Date Range</label>
+                  <div class="date-range-row">
+                    <input type="date" id="att-report-from" class="text-input compact">
+                    <span class="range-separator">to</span>
+                    <input type="date" id="att-report-to" class="text-input compact">
+                  </div>
+                  <label class="filter-label">Employee</label>
+                  <select id="att-report-emp" class="text-input compact select-input">
+                    <option value="all">All Employees</option>
+                  </select>
+                  <button class="btn btn-primary btn-full" id="btn-download-att-report">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download Attendance Report
+                  </button>
+                </div>
+              </div>
+              <div id="report-wages" class="report-panel">
+                <div class="report-filters-card">
+                  <label class="filter-label">Month Range</label>
+                  <div class="date-range-row">
+                    <input type="month" id="wage-report-from" class="text-input compact">
+                    <span class="range-separator">to</span>
+                    <input type="month" id="wage-report-to" class="text-input compact">
+                  </div>
+                  <button class="btn btn-primary btn-full" id="btn-download-wage-report">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download Wage Register
+                  </button>
+                </div>
+              </div>
+              <div id="report-employees" class="report-panel">
+                <div class="report-filters-card">
+                  <p class="report-desc">Export all employee records including name, role, phone, joining date, ID and wage details.</p>
+                  <button class="btn btn-primary btn-full" id="btn-download-emp-report">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download Employee Records
+                  </button>
+                </div>
+              </div>
+              <div id="report-leaves" class="report-panel">
+                <div class="report-filters-card">
+                  <label class="filter-label">Employee</label>
+                  <select id="leave-report-emp" class="text-input compact select-input">
+                    <option value="all">All Employees</option>
+                  </select>
+                  <button class="btn btn-primary btn-full" id="btn-download-leave-report">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download Leave Summary
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-tab="employees"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Employees</span></button>
+        <button class="nav-item" data-tab="attendance"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg><span>Attendance</span></button>
+        <button class="nav-item" data-tab="tasks"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Tasks</span></button>
+        <button class="nav-item" data-tab="reports"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Reports</span></button>
+      </nav>
+    </div>
+
+    <!-- ========== EMPLOYEE MAIN APP ========== -->
+    <div id="screen-emp-main" class="screen">
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <span class="business-name-display" id="emp-header-name">My Dashboard</span>
+        </div>
+        <div class="top-bar-right">
+          <button class="icon-btn" id="btn-emp-profile" aria-label="Profile">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main class="tab-content">
+        <!-- EMP TASKS TAB -->
+        <div id="etab-tasks" class="tab-panel active">
+          <div id="emp-tasks-empty" class="empty-state">
+            <div class="empty-icon"><svg width="64" height="64" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+            <h3>No tasks assigned</h3>
+            <p>Your tasks from the owner will appear here</p>
+          </div>
+          <div id="emp-tasks-list-container" class="list-container" style="display:none">
+            <div class="task-filters">
+              <button class="filter-chip active" data-emp-task-filter="all">All</button>
+              <button class="filter-chip" data-emp-task-filter="pending">Pending</button>
+              <button class="filter-chip" data-emp-task-filter="done">Done</button>
+              <button class="filter-chip" data-emp-task-filter="overdue">Overdue</button>
+            </div>
+            <div id="emp-tasks-list" class="card-list"></div>
+          </div>
+        </div>
+
+        <!-- EMP ATTENDANCE TAB -->
+        <div id="etab-attendance" class="tab-panel">
+          <div id="emp-att-content">
+            <div class="emp-att-summary" id="emp-att-summary"></div>
+            <div id="emp-att-history"></div>
+          </div>
+        </div>
+
+        <!-- EMP LEAVES TAB -->
+        <div id="etab-leaves" class="tab-panel">
+          <div id="emp-leaves-header" style="padding:16px 16px 0;">
+            <button class="btn btn-primary btn-full" id="btn-emp-request-leave">+ Request Leave</button>
+          </div>
+          <div id="emp-leaves-empty" class="empty-state-inline">
+            <p>No leave requests yet</p>
+          </div>
+          <div id="emp-leaves-list" class="card-list" style="padding-top:12px;"></div>
+        </div>
+      </main>
+
+      <nav class="bottom-nav">
+        <button class="nav-item active" data-emp-tab="etab-tasks"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>My Tasks</span></button>
+        <button class="nav-item" data-emp-tab="etab-attendance"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Attendance</span></button>
+        <button class="nav-item" data-emp-tab="etab-leaves"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Leaves</span></button>
+      </nav>
+    </div>
+
+    <!-- ========== SHARED MODALS / SHEETS ========== -->
+
+    <!-- Add/Edit Employee Sheet -->
+    <div id="sheet-employee" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title" id="sheet-emp-title">Add Employee</h3>
+        <form id="form-employee" class="sheet-form">
+          <input type="hidden" id="emp-edit-id">
+          <label class="input-label">Name <span class="required">*</span></label>
+          <input type="text" id="emp-name" class="text-input" placeholder="Employee name" required>
+          <label class="input-label">Role</label>
+          <input type="text" id="emp-role" class="text-input" placeholder="e.g. Machine Operator, Driver">
+          <label class="input-label">Phone <span class="required">*</span></label>
+          <div class="phone-input-group compact">
+            <span class="country-code">+91</span>
+            <input type="tel" id="emp-phone" maxlength="10" placeholder="Phone number" inputmode="numeric">
+          </div>
+          <div class="optional-section">
+            <button type="button" class="toggle-optional" id="toggle-emp-optional">+ More details (optional)</button>
+            <div class="optional-fields" id="emp-optional-fields" style="display:none">
+              <label class="input-label">Joining Date</label>
+              <input type="date" id="emp-joining" class="text-input">
+              <label class="input-label">Govt ID (Aadhaar / PAN)</label>
+              <input type="text" id="emp-govtid" class="text-input" placeholder="ID number">
+              <label class="input-label">Monthly Wage (Rs.)</label>
+              <input type="number" id="emp-wage" class="text-input" placeholder="e.g. 15000" inputmode="numeric">
+            </div>
+          </div>
+          <div class="sheet-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-emp">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Employee</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Employee Detail Sheet -->
+    <div id="sheet-emp-detail" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content sheet-content-tall"><div class="sheet-handle"></div><div id="emp-detail-body"></div></div>
+    </div>
+
+    <!-- Add Task Sheet -->
+    <div id="sheet-task" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Create Task</h3>
+        <form id="form-task" class="sheet-form">
+          <label class="input-label">Task Title <span class="required">*</span></label>
+          <input type="text" id="task-title" class="text-input" placeholder="What needs to be done?" required>
+          <label class="input-label">Assign To</label>
+          <select id="task-assignee" class="text-input select-input"><option value="">Select employee</option></select>
+          <label class="input-label">Due Date</label>
+          <input type="date" id="task-due" class="text-input">
+          <div class="sheet-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-task">Cancel</button>
+            <button type="submit" class="btn btn-primary">Assign Task</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Task Detail Sheet -->
+    <div id="sheet-task-detail" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content"><div class="sheet-handle"></div><div id="task-detail-body"></div></div>
+    </div>
+
+    <!-- Wage Log Sheet -->
+    <div id="sheet-wage" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Log Wage Payment</h3>
+        <form id="form-wage" class="sheet-form">
+          <input type="hidden" id="wage-emp-id">
+          <label class="input-label">Employee</label>
+          <input type="text" id="wage-emp-name" class="text-input" disabled>
+          <label class="input-label">Month</label>
+          <input type="month" id="wage-month" class="text-input">
+          <label class="input-label">Amount (Rs.)</label>
+          <input type="number" id="wage-amount" class="text-input" inputmode="numeric">
+          <label class="input-label">Status</label>
+          <div class="wage-status-toggle">
+            <button type="button" class="wage-status-btn active" data-status="paid">Paid</button>
+            <button type="button" class="wage-status-btn" data-status="unpaid">Unpaid</button>
+          </div>
+          <div class="sheet-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-wage">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Leave Request Sheet -->
+    <div id="sheet-leave" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title" id="sheet-leave-title">Request Leave</h3>
+        <form id="form-leave" class="sheet-form">
+          <input type="hidden" id="leave-emp-id-hidden">
+          <div id="leave-emp-select-wrap">
+            <label class="input-label">Employee <span class="required">*</span></label>
+            <select id="leave-employee" class="text-input select-input"><option value="">Select employee</option></select>
+          </div>
+          <label class="input-label">Leave Type <span class="required">*</span></label>
+          <select id="leave-type" class="text-input select-input">
+            <option value="casual">Casual Leave</option>
+            <option value="sick">Sick Leave</option>
+            <option value="earned">Earned Leave</option>
+            <option value="other">Other</option>
+          </select>
+          <div class="date-range-row">
+            <div class="date-range-field"><label class="input-label">From <span class="required">*</span></label><input type="date" id="leave-from" class="text-input"></div>
+            <div class="date-range-field"><label class="input-label">To <span class="required">*</span></label><input type="date" id="leave-to" class="text-input"></div>
+          </div>
+          <label class="input-label">Reason</label>
+          <input type="text" id="leave-reason" class="text-input" placeholder="Optional reason">
+          <div class="sheet-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-leave">Cancel</button>
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Leave Detail Sheet -->
+    <div id="sheet-leave-detail" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content"><div class="sheet-handle"></div><div id="leave-detail-body"></div></div>
+    </div>
+
+    <!-- Settings Sheet -->
+    <div id="sheet-settings" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content sheet-content-tall">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Business Profile & Settings</h3>
+        <div class="settings-body">
+          <div class="settings-group">
+            <h4>Business Information</h4>
+            <label class="input-label">Business Name</label>
+            <input type="text" id="settings-business" class="text-input">
+            <label class="input-label">Owner Name</label>
+            <input type="text" id="settings-owner" class="text-input">
+            <label class="input-label">Business Type</label>
+            <select id="settings-biz-type" class="text-input select-input">
+              <option value="">Select type</option>
+              <option value="manufacturing">Manufacturing</option>
+              <option value="retail">Retail</option>
+              <option value="logistics">Logistics</option>
+              <option value="services">Field Services</option>
+              <option value="construction">Construction</option>
+              <option value="food">Food & Restaurant</option>
+              <option value="other">Other</option>
+            </select>
+            <label class="input-label">Phone</label>
+            <div class="phone-input-group compact"><span class="country-code">+91</span><input type="tel" id="settings-phone" maxlength="10" inputmode="numeric"></div>
+            <label class="input-label">Email</label>
+            <input type="email" id="settings-email" class="text-input" placeholder="business@email.com">
+            <label class="input-label">Address</label>
+            <input type="text" id="settings-address" class="text-input" placeholder="Street address">
+            <div class="date-range-row">
+              <div class="date-range-field"><label class="input-label">City</label><input type="text" id="settings-city" class="text-input" placeholder="City"></div>
+              <div class="date-range-field"><label class="input-label">State</label><input type="text" id="settings-state" class="text-input" placeholder="State"></div>
+            </div>
+            <label class="input-label">PIN Code</label>
+            <input type="text" id="settings-pincode" class="text-input" maxlength="6" placeholder="PIN code" inputmode="numeric">
+            <label class="input-label">GST Number</label>
+            <input type="text" id="settings-gst" class="text-input" maxlength="15" placeholder="e.g. 22AAAAA0000A1Z5">
+          </div>
+          <div class="settings-group">
+            <h4>Data</h4>
+            <button class="btn btn-outline btn-full" id="btn-export-data">Export All Data (JSON)</button>
+          </div>
+          <div class="settings-group">
+            <button class="btn btn-primary btn-full" id="btn-save-settings">Save Profile</button>
+          </div>
+          <div class="settings-group">
+            <button class="btn btn-danger-outline btn-full" id="btn-logout">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              Logout
+            </button>
+            <p class="settings-version">KaamKar v1.0 MVP</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee Profile Sheet -->
+    <div id="sheet-emp-profile" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div id="emp-profile-body"></div>
+      </div>
+    </div>
+
+    <!-- Attendance History Sheet -->
+    <div id="sheet-att-history" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content sheet-content-tall"><div class="sheet-handle"></div><h3 class="sheet-title" id="att-history-title">Attendance History</h3><div id="att-history-body"></div></div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "kaamkar",
+  "version": "1.0.0",
+  "description": "KaamKar - Business management app for small business owners",
+  "private": true,
+  "scripts": {
+    "start": "npx serve -l 3456 .",
+    "dev": "npx serve -l 3456 ."
+  }
+}
