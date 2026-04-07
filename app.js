@@ -3,7 +3,8 @@
 const DB='kaamkar_data';
 let state=load();
 function defaults(){return{onboarded:false,phone:'',businessName:'',ownerName:'',businessType:'',email:'',address:'',city:'',bizState:'',pincode:'',gst:'',employees:[],attendance:{},tasks:[],wages:[],leaves:[]}}
-function load(){try{const r=localStorage.getItem(DB);if(r)return{...defaults(),...JSON.parse(r)}}catch(e){}return defaults()}
+function ensureEmpDefaults(e){if(!e.status)e.status='active';if(!e.accessRole)e.accessRole=null;return e}
+function load(){try{const r=localStorage.getItem(DB);if(r){const d={...defaults(),...JSON.parse(r)};d.employees=(d.employees||[]).map(ensureEmpDefaults);return d}}catch(e){}return defaults()}
 function save(){localStorage.setItem(DB,JSON.stringify(state))}
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
@@ -89,48 +90,65 @@ $$('.sub-tab').forEach(b=>b.addEventListener('click',()=>{
   $$('.sub-panel').forEach(p=>p.classList.remove('active'));$('#subtab-'+b.dataset.subtab).classList.add('active');
 }));
 
+function activeEmps(){return state.employees.filter(e=>e.status!=='exited')}
 function updateDropdowns(){
-  const opts='<option value="">Select employee</option>'+state.employees.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
+  const active=activeEmps();
+  const opts='<option value="">Select employee</option>'+active.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   const optsAll='<option value="all">All Employees</option>'+state.employees.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('');
   $('#task-assignee').innerHTML=opts;$('#leave-employee').innerHTML=opts;$('#att-report-emp').innerHTML=optsAll;$('#leave-report-emp').innerHTML=optsAll;
 }
 
 // ===== EMPLOYEES =====
+let empStatusFilter='active';
 function renderEmployees(){
   const emps=state.employees,search=($('#emp-search')?.value||'').toLowerCase();
-  const filtered=search?emps.filter(e=>e.name.toLowerCase().includes(search)||(e.role||'').toLowerCase().includes(search)):emps;
+  let filtered=emps;
+  if(empStatusFilter==='active')filtered=filtered.filter(e=>e.status!=='exited');
+  else if(empStatusFilter==='exited')filtered=filtered.filter(e=>e.status==='exited');
+  if(search)filtered=filtered.filter(e=>e.name.toLowerCase().includes(search)||(e.role||'').toLowerCase().includes(search));
   if(emps.length===0){$('#employees-empty').style.display='';$('#employees-list-container').style.display='none';return}
   $('#employees-empty').style.display='none';$('#employees-list-container').style.display='';
-  $('#emp-count').textContent=emps.length+' employee'+(emps.length!==1?'s':'');
+  const activeCount=emps.filter(e=>e.status!=='exited').length;
+  $('#emp-count').textContent=activeCount+' active employee'+(activeCount!==1?'s':'');
   const list=$('#employees-list');
-  list.innerHTML=filtered.map(e=>`<div class="emp-card" data-id="${e.id}"><div class="emp-avatar ${avatarCls(e.id)}">${ini(e.name)}</div><div class="emp-info"><div class="emp-name">${esc(e.name)}</div><div class="emp-role">${esc(e.role||'No role')}</div></div><span class="emp-chevron">&#8250;</span></div>`).join('');
+  list.innerHTML=filtered.map(e=>{const isExited=e.status==='exited';const roleBadge=e.accessRole?`<span class="access-role-badge">${e.accessRole}</span>`:'';const exitBadge=isExited?'<span class="exited-badge">EXITED</span>':'';return`<div class="emp-card${isExited?' exited':''}" data-id="${e.id}"><div class="emp-avatar ${avatarCls(e.id)}">${ini(e.name)}</div><div class="emp-info"><div class="emp-name">${esc(e.name)}${exitBadge}${roleBadge}</div><div class="emp-role">${esc(e.role||'No role')}</div></div><span class="emp-chevron">&#8250;</span></div>`}).join('');
   list.querySelectorAll('.emp-card').forEach(c=>c.addEventListener('click',()=>showEmpDetail(c.dataset.id)));
 }
 $('#emp-search')?.addEventListener('input',renderEmployees);
+$$('[data-emp-status-filter]').forEach(c=>c.addEventListener('click',()=>{$$('[data-emp-status-filter]').forEach(x=>x.classList.remove('active'));c.classList.add('active');empStatusFilter=c.dataset.empStatusFilter;renderEmployees()}));
 
 function showEmpDetail(eid){
-  const emp=state.employees.find(e=>e.id===eid);if(!emp)return;
+  const emp=state.employees.find(e=>e.id===eid);if(!emp)return;ensureEmpDefaults(emp);
   const wages=state.wages.filter(w=>w.empId===eid).sort((a,b)=>b.month.localeCompare(a.month));
-  const lc=state.leaves.filter(l=>l.empId===eid&&l.status==='approved').length;
+  const isExited=emp.status==='exited';
   const body=$('#emp-detail-body');
   body.innerHTML=`
-    <div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div></div>
+    <div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}${isExited?'<span class="exited-badge" style="margin-left:8px">EXITED</span>':''}${emp.accessRole?'<span class="access-role-badge" style="margin-left:8px">'+emp.accessRole.toUpperCase()+'</span>':''}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div></div>
     <div class="detail-grid">
       <div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div>
       <div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div>
       <div class="detail-item"><div class="detail-item-label">Govt ID</div><div class="detail-item-value">${emp.govtId?esc(emp.govtId):'—'}</div></div>
       <div class="detail-item"><div class="detail-item-label">Monthly Wage</div><div class="detail-item-value">${emp.wage?'Rs. '+Number(emp.wage).toLocaleString('en-IN'):'—'}</div></div>
+      ${isExited?`<div class="detail-item"><div class="detail-item-label">Exit Date</div><div class="detail-item-value">${emp.exitDate?fmtDate(emp.exitDate):'—'}</div></div><div class="detail-item"><div class="detail-item-label">Exit Reason</div><div class="detail-item-value">${emp.exitReason?esc(emp.exitReason):'—'}</div></div>`:''}
     </div>
     <div class="detail-actions">
       <button class="detail-action-btn" data-act="edit"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Employee</button>
       <button class="detail-action-btn" data-act="att"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Attendance History</button>
       <button class="detail-action-btn" data-act="wage"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Log Wage Payment</button>
       ${wages.length?`<div style="margin-top:8px"><div class="detail-item-label" style="margin-bottom:8px">RECENT WAGES</div>${wages.slice(0,3).map(w=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:14px"><span>${w.month}</span><span style="font-weight:600">Rs. ${Number(w.amount).toLocaleString('en-IN')}</span><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}">${w.status}</span></div>`).join('')}</div>`:''}
+      ${!isExited?`<button class="detail-action-btn" data-act="exit" style="color:var(--warning)"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Mark as Exited</button>`:''}
+      <button class="detail-action-btn" data-act="offer-letter"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Offer Letter</button>
+      ${isExited?`<button class="detail-action-btn" data-act="relieving-letter"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Relieving Letter</button>`:''}
       <button class="detail-action-btn danger" data-act="delete"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Delete Employee</button>
     </div>`;
   body.querySelector('[data-act="edit"]').addEventListener('click',()=>{closeSheet('sheet-emp-detail');openEditEmp(emp)});
   body.querySelector('[data-act="att"]').addEventListener('click',()=>{closeSheet('sheet-emp-detail');showAttHistory(emp)});
   body.querySelector('[data-act="wage"]').addEventListener('click',()=>{closeSheet('sheet-emp-detail');openWage(emp)});
+  const exitBtn=body.querySelector('[data-act="exit"]');
+  if(exitBtn)exitBtn.addEventListener('click',()=>{closeSheet('sheet-emp-detail');openExitSheet(emp)});
+  body.querySelector('[data-act="offer-letter"]').addEventListener('click',()=>{closeSheet('sheet-emp-detail');showOfferLetter(emp)});
+  const relBtn=body.querySelector('[data-act="relieving-letter"]');
+  if(relBtn)relBtn.addEventListener('click',()=>{closeSheet('sheet-emp-detail');showRelievingLetter(emp)});
   body.querySelector('[data-act="delete"]').addEventListener('click',()=>{
     if(confirm('Delete '+emp.name+'?')){
       state.employees=state.employees.filter(e=>e.id!==eid);state.tasks=state.tasks.filter(t=>t.assigneeId!==eid);
@@ -142,11 +160,11 @@ function showEmpDetail(eid){
   openSheet('sheet-emp-detail');
 }
 
-function openAddEmp(){$('#sheet-emp-title').textContent='Add Employee';$('#emp-edit-id').value='';$('#emp-name').value='';$('#emp-role').value='';$('#emp-phone').value='';$('#emp-joining').value='';$('#emp-govtid').value='';$('#emp-wage').value='';$('#emp-optional-fields').style.display='none';$('#toggle-emp-optional').textContent='+ More details (optional)';openSheet('sheet-employee');setTimeout(()=>$('#emp-name').focus(),300)}
-function openEditEmp(e){$('#sheet-emp-title').textContent='Edit Employee';$('#emp-edit-id').value=e.id;$('#emp-name').value=e.name;$('#emp-role').value=e.role||'';$('#emp-phone').value=e.phone||'';$('#emp-joining').value=e.joiningDate||'';$('#emp-govtid').value=e.govtId||'';$('#emp-wage').value=e.wage||'';if(e.joiningDate||e.govtId||e.wage){$('#emp-optional-fields').style.display='';$('#toggle-emp-optional').textContent='- Hide details'}openSheet('sheet-employee')}
+function openAddEmp(){$('#sheet-emp-title').textContent='Add Employee';$('#emp-edit-id').value='';$('#emp-name').value='';$('#emp-role').value='';$('#emp-access-role').value='';$('#emp-phone').value='';$('#emp-joining').value='';$('#emp-govtid').value='';$('#emp-wage').value='';$('#emp-optional-fields').style.display='none';$('#toggle-emp-optional').textContent='+ More details (optional)';openSheet('sheet-employee');setTimeout(()=>$('#emp-name').focus(),300)}
+function openEditEmp(e){$('#sheet-emp-title').textContent='Edit Employee';$('#emp-edit-id').value=e.id;$('#emp-name').value=e.name;$('#emp-role').value=e.role||'';$('#emp-access-role').value=e.accessRole||'';$('#emp-phone').value=e.phone||'';$('#emp-joining').value=e.joiningDate||'';$('#emp-govtid').value=e.govtId||'';$('#emp-wage').value=e.wage||'';if(e.joiningDate||e.govtId||e.wage){$('#emp-optional-fields').style.display='';$('#toggle-emp-optional').textContent='- Hide details'}openSheet('sheet-employee')}
 $('#btn-add-first-emp').addEventListener('click',openAddEmp);$('#btn-add-emp').addEventListener('click',openAddEmp);$('#btn-cancel-emp').addEventListener('click',()=>closeSheet('sheet-employee'));
 $('#toggle-emp-optional').addEventListener('click',()=>{const f=$('#emp-optional-fields'),b=$('#toggle-emp-optional');if(f.style.display==='none'){f.style.display='';b.textContent='- Hide details'}else{f.style.display='none';b.textContent='+ More details (optional)'}});
-$('#form-employee').addEventListener('submit',e=>{e.preventDefault();const eid=$('#emp-edit-id').value,d={name:$('#emp-name').value.trim(),role:$('#emp-role').value.trim(),phone:$('#emp-phone').value.trim(),joiningDate:$('#emp-joining').value,govtId:$('#emp-govtid').value.trim(),wage:$('#emp-wage').value};if(!d.name)return;if(eid){const emp=state.employees.find(x=>x.id===eid);if(emp)Object.assign(emp,d);toast('Employee updated')}else{state.employees.push({id:id(),...d});toast('Employee added!')}save();closeSheet('sheet-employee');renderEmployees();renderAttendance();updateDropdowns();updateSummary()});
+$('#form-employee').addEventListener('submit',e=>{e.preventDefault();const eid=$('#emp-edit-id').value,d={name:$('#emp-name').value.trim(),role:$('#emp-role').value.trim(),accessRole:$('#emp-access-role').value||null,phone:$('#emp-phone').value.trim(),joiningDate:$('#emp-joining').value,govtId:$('#emp-govtid').value.trim(),wage:$('#emp-wage').value};if(!d.name)return;if(eid){const emp=state.employees.find(x=>x.id===eid);if(emp)Object.assign(emp,d);toast('Employee updated')}else{state.employees.push(ensureEmpDefaults({id:id(),...d}));toast('Employee added!')}save();closeSheet('sheet-employee');renderEmployees();renderAttendance();updateDropdowns();updateSummary()});
 
 // ===== ATTENDANCE =====
 let attDate=today();
@@ -158,11 +176,12 @@ function renderAttendance(){
   else{const y=new Date();y.setDate(y.getDate()-1);$('#att-date-display').textContent=attDate===y.toISOString().slice(0,10)?'Yesterday':d.toLocaleDateString('en-IN',{weekday:'short'})}
   $('#att-date-sub').textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
   $('#att-next-day').disabled=attDate>=td;$('#att-date-picker').value=attDate;
-  const dd=state.attendance[attDate]||{},total=state.employees.length,marked=state.employees.filter(e=>dd[e.id]).length;
+  const active=activeEmps();
+  const dd=state.attendance[attDate]||{},total=active.length,marked=active.filter(e=>dd[e.id]).length;
   const pct=total?Math.round(marked/total*100):0;$('#att-progress-fill').style.width=pct+'%';$('#att-progress-text').textContent=marked+' of '+total+' marked';
   const appLeaves={};state.leaves.filter(l=>l.status==='approved').forEach(l=>{if(daysBetween(l.fromDate,l.toDate).includes(attDate))appLeaves[l.empId]=l.type});
   const list=$('#attendance-list');
-  list.innerHTML=state.employees.map(emp=>{const s=dd[emp.id]||'',ol=appLeaves[emp.id];return`<div class="att-row" data-id="${emp.id}"><div class="emp-avatar ${avatarCls(emp.id)}" style="width:36px;height:36px;font-size:13px">${ini(emp.name)}</div><div style="flex:1;min-width:0"><span class="att-name">${esc(emp.name)}</span>${ol?`<span class="att-leave-tag">${ol} leave</span>`:''}</div><div class="att-buttons"><button class="att-btn ${s==='P'?'present':''}" data-s="P">P</button><button class="att-btn ${s==='A'?'absent':''}" data-s="A">A</button><button class="att-btn ${s==='H'?'half':''}" data-s="H">H</button></div></div>`}).join('');
+  list.innerHTML=active.map(emp=>{const s=dd[emp.id]||'',ol=appLeaves[emp.id];return`<div class="att-row" data-id="${emp.id}"><div class="emp-avatar ${avatarCls(emp.id)}" style="width:36px;height:36px;font-size:13px">${ini(emp.name)}</div><div style="flex:1;min-width:0"><span class="att-name">${esc(emp.name)}</span>${ol?`<span class="att-leave-tag">${ol} leave</span>`:''}</div><div class="att-buttons"><button class="att-btn ${s==='P'?'present':''}" data-s="P">P</button><button class="att-btn ${s==='A'?'absent':''}" data-s="A">A</button><button class="att-btn ${s==='H'?'half':''}" data-s="H">H</button></div></div>`}).join('');
   list.querySelectorAll('.att-btn').forEach(btn=>btn.addEventListener('click',()=>{
     const eid=btn.closest('.att-row').dataset.id,ns=btn.dataset.s;
     if(!state.attendance[attDate])state.attendance[attDate]={};
@@ -376,6 +395,103 @@ $('#btn-emp-profile').addEventListener('click',()=>{
   body.querySelector('#btn-emp-logout').addEventListener('click',()=>{currentEmpId=null;closeSheet('sheet-emp-profile');showScreen('screen-role-select');toast('Logged out')});
   openSheet('sheet-emp-profile');
 });
+
+// ===== EMPLOYEE EXIT =====
+function openExitSheet(emp){
+  $('#exit-emp-id').value=emp.id;$('#exit-date').value=today();$('#exit-reason').value='Resigned';openSheet('sheet-emp-exit');
+}
+$('#btn-cancel-exit').addEventListener('click',()=>closeSheet('sheet-emp-exit'));
+$('#form-emp-exit').addEventListener('submit',e=>{
+  e.preventDefault();const eid=$('#exit-emp-id').value,emp=state.employees.find(x=>x.id===eid);if(!emp)return;
+  emp.status='exited';emp.exitDate=$('#exit-date').value;emp.exitReason=$('#exit-reason').value;
+  save();closeSheet('sheet-emp-exit');renderEmployees();renderAttendance();updateDropdowns();updateSummary();toast(emp.name+' marked as exited');
+});
+
+// ===== OFFER LETTER =====
+function showOfferLetter(emp){
+  const body=$('#offer-letter-body');
+  body.innerHTML=`<div class="letter-preview"><h4>OFFER LETTER</h4><p>Date: ${fmtDate(today())}</p><p>Dear <span class="field">${esc(emp.name)}</span>,</p><p>We are pleased to offer you the position of <span class="field">${esc(emp.role||'Employee')}</span> at <span class="field">${esc(state.businessName)}</span>.</p><p>Your joining date is <span class="field">${emp.joiningDate?fmtDate(emp.joiningDate):'[To be decided]'}</span>.</p><p>Your monthly compensation will be <span class="field">${emp.wage?'Rs. '+Number(emp.wage).toLocaleString('en-IN'):'[To be decided]'}</span>.</p><p>We look forward to having you on our team.</p><p style="margin-top:16px">Regards,<br><span class="field">${esc(state.ownerName)}</span><br>${esc(state.businessName)}</p></div><button class="btn btn-primary btn-full" disabled>Generate Offer Letter (Coming Soon)</button><p class="letter-coming-soon">Auto-generated offer letters with digital signatures - coming in v2</p>`;
+  openSheet('sheet-offer-letter');
+}
+
+// ===== RELIEVING LETTER =====
+function showRelievingLetter(emp){
+  const body=$('#relieving-letter-body');
+  body.innerHTML=`<div class="letter-preview"><h4>RELIEVING LETTER</h4><p>Date: ${fmtDate(today())}</p><p>To Whom It May Concern,</p><p>This is to certify that <span class="field">${esc(emp.name)}</span> was employed with <span class="field">${esc(state.businessName)}</span> as <span class="field">${esc(emp.role||'Employee')}</span> from <span class="field">${emp.joiningDate?fmtDate(emp.joiningDate):'[N/A]'}</span> to <span class="field">${emp.exitDate?fmtDate(emp.exitDate):'[N/A]'}</span>.</p><p>Reason for leaving: <span class="field">${emp.exitReason?esc(emp.exitReason):'[N/A]'}</span></p><p>We wish them all the best in their future endeavors.</p><p style="margin-top:16px">Regards,<br><span class="field">${esc(state.ownerName)}</span><br>${esc(state.businessName)}</p></div><button class="btn btn-primary btn-full" disabled>Generate Relieving Letter (Coming Soon)</button><p class="letter-coming-soon">Auto-generated relieving letters - coming in v2</p>`;
+  openSheet('sheet-relieving-letter');
+}
+
+// ===== SALARY PAYOUT =====
+let payoutMonth='';
+function openSalaryPayout(){
+  const n=new Date();payoutMonth=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');
+  $('#payout-month').value=payoutMonth;renderPayoutList();openSheet('sheet-salary-payout');
+}
+function renderPayoutList(){
+  const active=activeEmps();const list=$('#payout-list');
+  if(!active.length){list.innerHTML='<p style="text-align:center;color:var(--text-secondary);padding:24px">No active employees</p>';return}
+  list.innerHTML=active.map(emp=>{
+    const existing=state.wages.find(w=>w.empId===emp.id&&w.month===payoutMonth);
+    const isPaid=existing&&existing.status==='paid';
+    return`<div class="payout-row"><label><input type="checkbox" data-emp-id="${emp.id}" ${isPaid?'':'checked'}${isPaid?' disabled':''}><span>${esc(emp.name)}</span></label><div class="payout-info">${esc(emp.role||'')}<br><strong>Rs. ${emp.wage?Number(emp.wage).toLocaleString('en-IN'):'0'}</strong>${isPaid?'<br><span style="color:var(--accent);font-size:11px;font-weight:700">PAID</span>':''}</div></div>`
+  }).join('');
+  const totalWage=active.filter(e=>{const ex=state.wages.find(w=>w.empId===e.id&&w.month===payoutMonth);return!(ex&&ex.status==='paid')}).reduce((s,e)=>s+Number(e.wage||0),0);
+  list.innerHTML+=`<div class="payout-total">Unpaid Total: Rs. ${totalWage.toLocaleString('en-IN')}</div>`;
+}
+$('#payout-month').addEventListener('change',e=>{payoutMonth=e.target.value;renderPayoutList()});
+$('#btn-cancel-payout').addEventListener('click',()=>closeSheet('sheet-salary-payout'));
+$('#btn-confirm-payout').addEventListener('click',()=>{
+  const checks=$$('#payout-list input[type="checkbox"]:checked:not(:disabled)');
+  if(!checks.length){toast('No employees to pay');return}
+  let total=0;const names=[];
+  checks.forEach(cb=>{const emp=state.employees.find(e=>e.id===cb.dataset.empId);if(emp){total+=Number(emp.wage||0);names.push(emp.name)}});
+  if(!confirm('Pay Rs. '+total.toLocaleString('en-IN')+' to '+checks.length+' employee(s) for '+payoutMonth+'?'))return;
+  checks.forEach(cb=>{
+    const empId=cb.dataset.empId,emp=state.employees.find(e=>e.id===empId);if(!emp)return;
+    const ex=state.wages.find(w=>w.empId===empId&&w.month===payoutMonth);
+    if(ex){ex.amount=emp.wage||0;ex.status='paid'}
+    else state.wages.push({id:id(),empId,month:payoutMonth,amount:emp.wage||0,status:'paid'});
+  });
+  save();closeSheet('sheet-salary-payout');toast('Salary marked as paid for '+checks.length+' employee(s)');
+});
+$('#btn-salary-payout').addEventListener('click',openSalaryPayout);
+
+// ===== HR ATTENDANCE (Employee with HR role) =====
+let hrAttDate=today();
+function renderHrAttendance(){
+  const active=activeEmps();
+  const d=new Date(hrAttDate+'T00:00:00'),td=today();
+  if(hrAttDate===td)$('#hr-att-date-display').textContent='Today';
+  else{const y=new Date();y.setDate(y.getDate()-1);$('#hr-att-date-display').textContent=hrAttDate===y.toISOString().slice(0,10)?'Yesterday':d.toLocaleDateString('en-IN',{weekday:'short'})}
+  $('#hr-att-date-sub').textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  $('#hr-att-next-day').disabled=hrAttDate>=td;$('#hr-att-date-picker').value=hrAttDate;
+  const dd=state.attendance[hrAttDate]||{},total=active.length,marked=active.filter(e=>dd[e.id]).length;
+  const pct=total?Math.round(marked/total*100):0;$('#hr-att-progress-fill').style.width=pct+'%';$('#hr-att-progress-text').textContent=marked+' of '+total+' marked';
+  const appLeaves={};state.leaves.filter(l=>l.status==='approved').forEach(l=>{if(daysBetween(l.fromDate,l.toDate).includes(hrAttDate))appLeaves[l.empId]=l.type});
+  const list=$('#hr-attendance-list');
+  list.innerHTML=active.map(emp=>{const s=dd[emp.id]||'',ol=appLeaves[emp.id];return`<div class="att-row" data-id="${emp.id}"><div class="emp-avatar ${avatarCls(emp.id)}" style="width:36px;height:36px;font-size:13px">${ini(emp.name)}</div><div style="flex:1;min-width:0"><span class="att-name">${esc(emp.name)}</span>${ol?`<span class="att-leave-tag">${ol} leave</span>`:''}</div><div class="att-buttons"><button class="att-btn ${s==='P'?'present':''}" data-s="P">P</button><button class="att-btn ${s==='A'?'absent':''}" data-s="A">A</button><button class="att-btn ${s==='H'?'half':''}" data-s="H">H</button></div></div>`}).join('');
+  list.querySelectorAll('.att-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    const eid=btn.closest('.att-row').dataset.id,ns=btn.dataset.s;
+    if(!state.attendance[hrAttDate])state.attendance[hrAttDate]={};
+    if(state.attendance[hrAttDate][eid]===ns)delete state.attendance[hrAttDate][eid];else state.attendance[hrAttDate][eid]=ns;
+    save();renderHrAttendance();
+  }));
+}
+$('#hr-att-prev-day').addEventListener('click',()=>{const d=new Date(hrAttDate+'T00:00:00');d.setDate(d.getDate()-1);hrAttDate=d.toISOString().slice(0,10);renderHrAttendance()});
+$('#hr-att-next-day').addEventListener('click',()=>{const d=new Date(hrAttDate+'T00:00:00');d.setDate(d.getDate()+1);if(d.toISOString().slice(0,10)<=today()){hrAttDate=d.toISOString().slice(0,10);renderHrAttendance()}});
+$('#hr-att-date-tap').addEventListener('click',()=>{const dp=$('#hr-att-date-picker');dp.style.position='fixed';dp.style.opacity='0';dp.style.pointerEvents='auto';dp.showPicker?dp.showPicker():dp.click()});
+$('#hr-att-date-picker').addEventListener('change',e=>{const v=e.target.value;if(v&&v<=today()){hrAttDate=v;renderHrAttendance()}e.target.style.pointerEvents='none'});
+
+// ===== ACCOUNTANT WAGES VIEW =====
+function renderAccountantWages(){
+  const wages=[...state.wages].sort((a,b)=>b.month.localeCompare(a.month));
+  if(!wages.length){$('#accountant-wages-empty').style.display='';$('#accountant-wages-list').innerHTML='';return}
+  $('#accountant-wages-empty').style.display='none';
+  let html='<table class="wage-table"><thead><tr><th>Employee</th><th>Month</th><th>Amount</th><th>Status</th></tr></thead><tbody>';
+  wages.forEach(w=>{const emp=state.employees.find(e=>e.id===w.empId);html+=`<tr><td>${emp?esc(emp.name):'Unknown'}</td><td>${w.month}</td><td>Rs. ${Number(w.amount).toLocaleString('en-IN')}</td><td><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}">${w.status}</span></td></tr>`});
+  html+='</tbody></table>';
+  $('#accountant-wages-list').innerHTML=html;
+}
 
 // ===== SHEET HELPERS =====
 function openSheet(i){$('#'+i).classList.add('open')}

@@ -112,6 +112,7 @@
           <div id="emp-login-error" class="error-msg" style="display:none">
             No account found. Please ask your employer to add you first.
           </div>
+          <p class="emp-login-note">Note: Employee login works on the same device where the owner added you (demo limitation).</p>
         </div>
       </div>
     </div>
@@ -144,6 +145,11 @@
               <div class="search-bar">
                 <svg width="16" height="16" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                 <input type="text" id="emp-search" placeholder="Search employees...">
+              </div>
+              <div class="emp-status-filters">
+                <button class="filter-chip active" data-emp-status-filter="active">Active</button>
+                <button class="filter-chip" data-emp-status-filter="exited">Exited</button>
+                <button class="filter-chip" data-emp-status-filter="all">All</button>
               </div>
             </div>
             <div id="employees-list" class="card-list"></div>
@@ -225,6 +231,13 @@
               <div class="summary-card"><span class="summary-number" id="summary-present">0</span><span class="summary-label">Present Today</span></div>
               <div class="summary-card"><span class="summary-number" id="summary-tasks-pending">0</span><span class="summary-label">Tasks Pending</span></div>
               <div class="summary-card"><span class="summary-number" id="summary-tasks-overdue">0</span><span class="summary-label">Overdue</span></div>
+            </div>
+
+            <div style="margin-top:16px;margin-bottom:16px">
+              <button class="btn btn-accent btn-full" id="btn-salary-payout">
+                <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Monthly Salary Payout
+              </button>
             </div>
 
             <h3 class="section-title" style="margin-top:20px;">Download Reports</h3>
@@ -354,12 +367,41 @@
           </div>
           <div id="emp-leaves-list" class="card-list" style="padding-top:12px;"></div>
         </div>
+
+        <!-- EMP HR ATTENDANCE TAB (HR role only) -->
+        <div id="etab-hr-attendance" class="tab-panel">
+          <div class="attendance-header">
+            <button class="date-nav-btn" id="hr-att-prev-day">&larr;</button>
+            <div class="date-display" id="hr-att-date-tap">
+              <span class="date-main" id="hr-att-date-display">Today</span>
+              <span class="date-sub" id="hr-att-date-sub"></span>
+            </div>
+            <button class="date-nav-btn" id="hr-att-next-day">&rarr;</button>
+          </div>
+          <input type="date" id="hr-att-date-picker" class="hidden-date-picker">
+          <div class="attendance-progress">
+            <div class="progress-bar"><div class="progress-fill" id="hr-att-progress-fill" style="width:0%"></div></div>
+            <span class="progress-text" id="hr-att-progress-text">0 of 0 marked</span>
+          </div>
+          <div id="hr-attendance-list" class="attendance-list"></div>
+        </div>
+
+        <!-- EMP ACCOUNTANT WAGES TAB (Accountant role only) -->
+        <div id="etab-wages" class="tab-panel">
+          <div style="padding:16px">
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:16px">Wage Records</h3>
+            <div id="accountant-wages-list"></div>
+            <div id="accountant-wages-empty" class="empty-state-inline"><p>No wage records found</p></div>
+          </div>
+        </div>
       </main>
 
-      <nav class="bottom-nav">
+      <nav class="bottom-nav" id="emp-bottom-nav">
         <button class="nav-item active" data-emp-tab="etab-tasks"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>My Tasks</span></button>
         <button class="nav-item" data-emp-tab="etab-attendance"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Attendance</span></button>
         <button class="nav-item" data-emp-tab="etab-leaves"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>Leaves</span></button>
+        <button class="nav-item" data-emp-tab="etab-hr-attendance" id="emp-nav-hr" style="display:none"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg><span>Mark Att.</span></button>
+        <button class="nav-item" data-emp-tab="etab-wages" id="emp-nav-accountant" style="display:none"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Wages</span></button>
       </nav>
     </div>
 
@@ -377,6 +419,12 @@
           <input type="text" id="emp-name" class="text-input" placeholder="Employee name" required>
           <label class="input-label">Role</label>
           <input type="text" id="emp-role" class="text-input" placeholder="e.g. Machine Operator, Driver">
+          <label class="input-label">Access Role</label>
+          <select id="emp-access-role" class="text-input select-input">
+            <option value="">None</option>
+            <option value="hr">HR</option>
+            <option value="accountant">Accountant</option>
+          </select>
           <label class="input-label">Phone <span class="required">*</span></label>
           <div class="phone-input-group compact">
             <span class="country-code">+91</span>
@@ -570,6 +618,69 @@
     <div id="sheet-att-history" class="bottom-sheet">
       <div class="sheet-overlay"></div>
       <div class="sheet-content sheet-content-tall"><div class="sheet-handle"></div><h3 class="sheet-title" id="att-history-title">Attendance History</h3><div id="att-history-body"></div></div>
+    </div>
+
+    <!-- Salary Payout Sheet -->
+    <div id="sheet-salary-payout" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content sheet-content-tall">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Monthly Salary Payout</h3>
+        <div style="margin-bottom:12px">
+          <label class="input-label">Month</label>
+          <input type="month" id="payout-month" class="text-input compact">
+        </div>
+        <div id="payout-list"></div>
+        <div class="sheet-actions" style="margin-top:16px">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-payout">Cancel</button>
+          <button type="button" class="btn btn-accent" id="btn-confirm-payout">Mark All as Paid</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employee Exit Sheet -->
+    <div id="sheet-emp-exit" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Mark Employee as Exited</h3>
+        <form id="form-emp-exit" class="sheet-form">
+          <input type="hidden" id="exit-emp-id">
+          <label class="input-label">Exit Date</label>
+          <input type="date" id="exit-date" class="text-input">
+          <label class="input-label">Exit Reason</label>
+          <select id="exit-reason" class="text-input select-input">
+            <option value="Resigned">Resigned</option>
+            <option value="Terminated">Terminated</option>
+            <option value="Contract End">Contract End</option>
+            <option value="Other">Other</option>
+          </select>
+          <div class="sheet-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-exit">Cancel</button>
+            <button type="submit" class="btn btn-warning">Confirm Exit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Offer Letter Sheet -->
+    <div id="sheet-offer-letter" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content sheet-content-tall">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Offer Letter</h3>
+        <div id="offer-letter-body"></div>
+      </div>
+    </div>
+
+    <!-- Relieving Letter Sheet -->
+    <div id="sheet-relieving-letter" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content sheet-content-tall">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Relieving Letter</h3>
+        <div id="relieving-letter-body"></div>
+      </div>
     </div>
 
     <!-- Toast -->
