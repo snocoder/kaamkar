@@ -358,6 +358,30 @@ a{color:var(--primary);text-decoration:none}
 .hamburger-divider{height:1px;background:var(--border);margin:8px 20px}
 .hamburger-footer{padding:16px 20px;border-top:1px solid var(--border);font-size:12px;color:var(--text-tertiary);text-align:center}
 
+/* Dashboard sections */
+.summary-card.clickable{cursor:pointer;transition:all .15s}
+.summary-card.clickable:active{transform:scale(.96);box-shadow:var(--shadow)}
+.dash-section{background:var(--surface);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);border:1px solid var(--border-light);margin-bottom:4px}
+.dash-att-bar-wrap{background:var(--surface);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);border:1px solid var(--border-light)}
+.dash-att-bar{display:flex;height:28px;border-radius:var(--radius-full);overflow:hidden;background:var(--border-light)}
+.dash-att-bar div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:width .3s}
+.dash-att-legend{display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--text-secondary);flex-wrap:wrap}
+.dash-att-legend span{display:flex;align-items:center;gap:4px}
+.dash-att-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.dash-mini-card{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light);cursor:pointer}
+.dash-mini-card:last-child{border-bottom:none}
+.dash-mini-card:active{opacity:.7}
+.dash-mini-left{flex:1;min-width:0}
+.dash-mini-title{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dash-mini-sub{font-size:12px;color:var(--text-secondary)}
+.dash-empty{font-size:13px;color:var(--text-tertiary);text-align:center;padding:12px 0}
+.dash-wage-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+.dash-wage-label{font-size:14px;color:var(--text-secondary)}
+.dash-wage-value{font-size:16px;font-weight:700}
+
+/* Employee attendance filters */
+.emp-att-filters{display:flex;gap:4px}
+
 /* Permission Card */
 .perm-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
 .perm-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -366,6 +390,11 @@ a{color:var(--primary);text-decoration:none}
 .perm-card select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;background:var(--surface);appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
 .perm-enables{font-size:12px;color:var(--text-tertiary);margin-top:8px;padding:8px 12px;background:var(--border-light);border-radius:var(--radius-sm);line-height:1.5}
 .perm-enables strong{color:var(--text-secondary)}
+.perm-checkboxes{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.perm-check-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border-light);border-radius:var(--radius-sm);cursor:pointer;font-size:14px}
+.perm-check-item:has(input:checked){background:var(--accent-light,#eff6ff);border-color:var(--primary)}
+.perm-check-item input[type="checkbox"]{width:18px;height:18px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
+.perm-check-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Employee Payout History */
 .emp-payout-card{background:var(--surface);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);border:1px solid var(--border-light);margin-bottom:8px}

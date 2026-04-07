@@ -1,7 +1,7 @@
 {
-  "name": "kaamkar",
+  "name": "workmitra",
   "version": "1.0.0",
-  "description": "KaamKar - Business management app for small business owners",
+  "description": "WorkMitra - Business management app for small business owners",
   "private": true,
   "scripts": {
     "start": "npx serve -l 3456 .",

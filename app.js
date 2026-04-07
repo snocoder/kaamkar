@@ -1,11 +1,13 @@
 (function(){
 'use strict';
-const DB='kaamkar_data';
-const SESSION='kaamkar_session';
+const DB='workmitra_data';
+const SESSION='workmitra_session';
 let state=load();
-function defaults(){return{onboarded:false,phone:'',businessName:'',ownerName:'',businessType:'',email:'',address:'',city:'',bizState:'',pincode:'',gst:'',employees:[],attendance:{},tasks:[],wages:[],leaves:[],permissions:{leaveApproval:null,salaryPayout:null,reports:null}}}
+function defaults(){return{onboarded:false,phone:'',businessName:'',ownerName:'',businessType:'',email:'',address:'',city:'',bizState:'',pincode:'',gst:'',employees:[],attendance:{},tasks:[],wages:[],leaves:[],permissions:{leaveApproval:[],salaryPayout:[],reports:[]}}}
 function ensureEmpDefaults(e){if(!e.status)e.status='active';if(!e.accessRole)e.accessRole=null;return e}
-function load(){try{const r=localStorage.getItem(DB);if(r){const d={...defaults(),...JSON.parse(r)};d.employees=(d.employees||[]).map(ensureEmpDefaults);if(!d.permissions)d.permissions={leaveApproval:null,salaryPayout:null,reports:null};return d}}catch(e){}return defaults()}
+function load(){try{const r=localStorage.getItem(DB);if(r){const d={...defaults(),...JSON.parse(r)};d.employees=(d.employees||[]).map(ensureEmpDefaults);if(!d.permissions)d.permissions={leaveApproval:[],salaryPayout:[],reports:[]};
+      // Migrate old single-ID permissions to arrays
+      ['leaveApproval','salaryPayout','reports'].forEach(k=>{if(d.permissions[k]&&!Array.isArray(d.permissions[k])){d.permissions[k]=d.permissions[k]?[d.permissions[k]]:[];}if(!d.permissions[k])d.permissions[k]=[];});return d}}catch(e){}return defaults()}
 function save(){localStorage.setItem(DB,JSON.stringify(state))}
 function saveSession(role,empId){localStorage.setItem(SESSION,JSON.stringify({role,empId:empId||null}))}
 function clearSession(){localStorage.removeItem(SESSION)}
@@ -19,6 +21,7 @@ function localDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padSt
 function today(){return localDateStr(new Date())}
 function isOverdue(t){return t.status==='pending'&&t.dueDate&&t.dueDate<today()}
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function hasPerm(key,empId){return Array.isArray(state.permissions[key])&&state.permissions[key].includes(empId)}
 function daysBetween(f,t){const days=[],d=new Date(f+'T00:00:00'),end=new Date(t+'T00:00:00');while(d<=end){days.push(localDateStr(d));d.setDate(d.getDate()+1)}return days}
 
 // Toast - at top, auto-dismiss
@@ -135,9 +138,9 @@ function showEmpDetail(eid){
   const isExited=emp.status==='exited';
   // Derive permissions for display
   const permLabels=[];
-  if(state.permissions.leaveApproval===eid)permLabels.push('Leave Approval');
-  if(state.permissions.salaryPayout===eid)permLabels.push('Salary Payout');
-  if(state.permissions.reports===eid)permLabels.push('Reports');
+  if(hasPerm('leaveApproval',eid))permLabels.push('Leave Approval');
+  if(hasPerm('salaryPayout',eid))permLabels.push('Salary Payout');
+  if(hasPerm('reports',eid))permLabels.push('Reports');
   const body=$('#emp-detail-body');
   body.innerHTML=`
     <div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}${isExited?'<span class="exited-badge" style="margin-left:8px">EXITED</span>':''}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div>${permLabels.length?`<div style="margin-top:6px">${permLabels.map(l=>`<span class="access-role-badge" style="margin:2px">${l}</span>`).join('')}</div>`:''}</div>
@@ -145,14 +148,14 @@ function showEmpDetail(eid){
       <div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div>
       <div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div>
       <div class="detail-item"><div class="detail-item-label">Govt ID</div><div class="detail-item-value">${emp.govtId?esc(emp.govtId):'—'}</div></div>
-      <div class="detail-item"><div class="detail-item-label">Monthly Wage</div><div class="detail-item-value">${emp.wage?'Rs. '+Number(emp.wage).toLocaleString('en-IN'):'—'}</div></div>
+      <div class="detail-item"><div class="detail-item-label">Monthly Wage</div><div class="detail-item-value">${emp.wage?'₹'+Number(emp.wage).toLocaleString('en-IN'):'—'}</div></div>
       ${isExited?`<div class="detail-item"><div class="detail-item-label">Exit Date</div><div class="detail-item-value">${emp.exitDate?fmtDate(emp.exitDate):'—'}</div></div><div class="detail-item"><div class="detail-item-label">Exit Reason</div><div class="detail-item-value">${emp.exitReason?esc(emp.exitReason):'—'}</div></div>`:''}
     </div>
     <div class="detail-actions">
       <button class="detail-action-btn" data-act="edit"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Employee</button>
       <button class="detail-action-btn" data-act="att"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Attendance History</button>
       <button class="detail-action-btn" data-act="wage"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Log Wage Payment</button>
-      ${wages.length?`<div style="margin-top:8px"><div class="detail-item-label" style="margin-bottom:8px">RECENT WAGES</div>${wages.slice(0,3).map(w=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:14px"><span>${w.month}</span><span style="font-weight:600">Rs. ${Number(w.amount).toLocaleString('en-IN')}</span><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}">${w.status}</span></div>`).join('')}</div>`:''}
+      ${wages.length?`<div style="margin-top:8px"><div class="detail-item-label" style="margin-bottom:8px">RECENT WAGES</div>${wages.slice(0,3).map(w=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:14px"><span>${w.month}</span><span style="font-weight:600">₹${Number(w.amount).toLocaleString('en-IN')}</span><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}">${w.status}</span></div>`).join('')}</div>`:''}
       ${!isExited?`<button class="detail-action-btn" data-act="exit" style="color:var(--warning)"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Mark as Exited</button>`:''}
       <button class="detail-action-btn" data-act="offer-letter"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Offer Letter</button>
       ${isExited?`<button class="detail-action-btn" data-act="relieving-letter"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Relieving Letter</button>`:''}
@@ -172,7 +175,7 @@ function showEmpDetail(eid){
       Object.keys(state.attendance).forEach(d=>delete(state.attendance[d]||{})[eid]);
       state.wages=state.wages.filter(w=>w.empId!==eid);state.leaves=state.leaves.filter(l=>l.empId!==eid);
       // Clean up permissions
-      Object.keys(state.permissions).forEach(k=>{if(state.permissions[k]===eid)state.permissions[k]=null});
+      Object.keys(state.permissions).forEach(k=>{if(Array.isArray(state.permissions[k]))state.permissions[k]=state.permissions[k].filter(id=>id!==eid)});
       save();closeSheet('sheet-emp-detail');renderEmployees();renderAttendance();renderTasks();renderLeaves();updateSummary();updateDropdowns();toast('Employee deleted');
     }
   });
@@ -258,7 +261,7 @@ function showLeaveDetail(lid){
   const emp=state.employees.find(e=>e.id===leave.empId),days=daysBetween(leave.fromDate,leave.toDate).length;
   // Check if current user is owner or has leave approval permission
   const isOwner=!currentEmpId||(getSession()&&getSession().role==='owner');
-  const hasLeavePermission=currentEmpId&&state.permissions.leaveApproval===currentEmpId;
+  const hasLeavePermission=currentEmpId&&hasPerm('leaveApproval',currentEmpId);
   const canManageLeave=isOwner||hasLeavePermission;
   const body=$('#leave-detail-body');
   body.innerHTML=`<h3 class="sheet-title">Leave Request</h3><div class="task-detail-info" style="border-top:none;padding-top:0"><div class="task-detail-row"><span class="task-detail-label">Employee</span><span class="task-detail-value">${emp?esc(emp.name):'Unknown'}</span></div><div class="task-detail-row"><span class="task-detail-label">Type</span><span class="task-detail-value" style="text-transform:capitalize">${leave.type} Leave</span></div><div class="task-detail-row"><span class="task-detail-label">From</span><span class="task-detail-value">${fmtDate(leave.fromDate)}</span></div><div class="task-detail-row"><span class="task-detail-label">To</span><span class="task-detail-value">${fmtDate(leave.toDate)}</span></div><div class="task-detail-row"><span class="task-detail-label">Duration</span><span class="task-detail-value">${days} day${days!==1?'s':''}</span></div>${leave.reason?`<div class="task-detail-row"><span class="task-detail-label">Reason</span><span class="task-detail-value">${esc(leave.reason)}</span></div>`:''}<div class="task-detail-row"><span class="task-detail-label">Status</span><span class="task-status-badge ${leave.status}">${leave.status}</span></div></div><div class="task-detail-actions">${canManageLeave&&leave.status==='pending'?'<button class="btn btn-accent" data-act="approve">Approve</button><button class="btn btn-danger-outline" data-act="reject">Reject</button>':''}${canManageLeave&&leave.status==='approved'?'<button class="btn btn-warning" data-act="revoke">Revoke</button>':''}${canManageLeave&&leave.status==='rejected'?'<button class="btn btn-accent" data-act="approve">Approve</button>':''}${canManageLeave?'<button class="btn btn-ghost" data-act="delete">Delete</button>':''}</div>`;
@@ -282,7 +285,7 @@ function renderTasks(){
   let f=tasks;if(taskFilter==='pending')f=tasks.filter(t=>t.displayStatus==='pending');else if(taskFilter==='done')f=tasks.filter(t=>t.status==='done');else if(taskFilter==='overdue')f=tasks.filter(t=>t.displayStatus==='overdue');
   f.sort((a,b)=>{const o={overdue:0,pending:1,done:2};return(o[a.displayStatus]||1)-(o[b.displayStatus]||1)||(a.dueDate||'9999').localeCompare(b.dueDate||'9999')});
   const list=$('#tasks-list');
-  list.innerHTML=f.map(t=>{const emp=state.employees.find(e=>e.id===t.assigneeId),sc=t.displayStatus;return`<div class="task-card ${sc}" data-id="${t.id}"><div class="task-title-row"><span class="task-title">${esc(t.title)}</span><span class="task-status-badge ${sc}">${sc}</span></div><div class="task-meta"><span class="task-meta-item"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${emp?esc(emp.name):'Unassigned'}</span>${t.dueDate?`<span class="task-meta-item"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${fmtDate(t.dueDate)}</span>`:''}</div></div>`}).join('');
+  list.innerHTML=f.map(t=>{const emp=state.employees.find(e=>e.id===t.assigneeId),sc=t.displayStatus;const creator=t.createdBy==='owner'?state.ownerName:(state.employees.find(e=>e.id===t.createdBy)||{}).name;return`<div class="task-card ${sc}" data-id="${t.id}"><div class="task-title-row"><span class="task-title">${esc(t.title)}</span><span class="task-status-badge ${sc}">${sc}</span></div><div class="task-meta"><span class="task-meta-item"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>${emp?esc(emp.name):'Unassigned'}</span>${creator?`<span class="task-meta-item"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>by ${esc(creator)}</span>`:''} ${t.dueDate?`<span class="task-meta-item"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>${fmtDate(t.dueDate)}</span>`:''}</div></div>`}).join('');
   list.querySelectorAll('.task-card').forEach(c=>c.addEventListener('click',()=>showTaskDetail(c.dataset.id)));
 }
 $$('[data-filter]').forEach(c=>c.addEventListener('click',()=>{$$('[data-filter]').forEach(x=>x.classList.remove('active'));c.classList.add('active');taskFilter=c.dataset.filter;renderTasks()}));
@@ -291,7 +294,8 @@ function showTaskDetail(tid,isEmp){
   const task=state.tasks.find(t=>t.id===tid);if(!task)return;
   const emp=state.employees.find(e=>e.id===task.assigneeId),sc=isOverdue(task)?'overdue':task.status;
   const body=$('#task-detail-body');
-  body.innerHTML=`<div class="task-detail-header"><div class="task-detail-title">${esc(task.title)}</div><span class="task-status-badge ${sc} task-detail-status">${sc}</span></div><div class="task-detail-info"><div class="task-detail-row"><span class="task-detail-label">Assigned To</span><span class="task-detail-value">${emp?esc(emp.name):'Unassigned'}</span></div><div class="task-detail-row"><span class="task-detail-label">Due Date</span><span class="task-detail-value">${task.dueDate?fmtDate(task.dueDate):'No due date'}</span></div><div class="task-detail-row"><span class="task-detail-label">Created</span><span class="task-detail-value">${fmtDate(task.createdAt)}</span></div></div><div class="task-detail-actions">${task.status!=='done'?'<button class="btn btn-accent" data-act="done">Mark as Done</button>':'<button class="btn btn-outline" data-act="reopen">Reopen</button>'}${isEmp?'':'<button class="btn btn-danger-outline" data-act="delete">Delete</button>'}</div>`;
+  const creator=task.createdBy==='owner'?state.ownerName:(state.employees.find(e=>e.id===task.createdBy)||{}).name||'Unknown';
+  body.innerHTML=`<div class="task-detail-header"><div class="task-detail-title">${esc(task.title)}</div><span class="task-status-badge ${sc} task-detail-status">${sc}</span></div><div class="task-detail-info"><div class="task-detail-row"><span class="task-detail-label">Assigned To</span><span class="task-detail-value">${emp?esc(emp.name):'Unassigned'}</span></div><div class="task-detail-row"><span class="task-detail-label">Created By</span><span class="task-detail-value">${esc(creator)}</span></div><div class="task-detail-row"><span class="task-detail-label">Due Date</span><span class="task-detail-value">${task.dueDate?fmtDate(task.dueDate):'No due date'}</span></div><div class="task-detail-row"><span class="task-detail-label">Created On</span><span class="task-detail-value">${fmtDate(task.createdAt)}</span></div></div><div class="task-detail-actions">${task.status!=='done'?'<button class="btn btn-accent" data-act="done">Mark as Done</button>':'<button class="btn btn-outline" data-act="reopen">Reopen</button>'}${isEmp?'':'<button class="btn btn-danger-outline" data-act="delete">Delete</button>'}</div>`;
   body.querySelectorAll('[data-act]').forEach(btn=>btn.addEventListener('click',()=>{
     if(btn.dataset.act==='done'){task.status='done';toast('Task done!')}
     else if(btn.dataset.act==='reopen'){task.status='pending';toast('Task reopened')}
@@ -303,7 +307,7 @@ function showTaskDetail(tid,isEmp){
 
 function openAddTask(){updateDropdowns();$('#task-title').value='';$('#task-assignee').value='';$('#task-due').value=today();openSheet('sheet-task');setTimeout(()=>$('#task-title').focus(),300)}
 $('#btn-add-first-task').addEventListener('click',openAddTask);$('#btn-add-task').addEventListener('click',openAddTask);$('#btn-cancel-task').addEventListener('click',()=>closeSheet('sheet-task'));
-$('#form-task').addEventListener('submit',e=>{e.preventDefault();const title=$('#task-title').value.trim(),assignee=$('#task-assignee').value,due=$('#task-due').value;if(!title)return;state.tasks.push({id:id(),title,assigneeId:assignee,dueDate:due,status:'pending',createdAt:today()});save();closeSheet('sheet-task');renderTasks();updateSummary();const emp=state.employees.find(e=>e.id===assignee);toast(emp?'Task assigned to '+emp.name:'Task created!')});
+$('#form-task').addEventListener('submit',e=>{e.preventDefault();const title=$('#task-title').value.trim(),assignee=$('#task-assignee').value,due=$('#task-due').value;if(!title)return;state.tasks.push({id:id(),title,assigneeId:assignee,dueDate:due,status:'pending',createdAt:today(),createdBy:currentEmpId?currentEmpId:'owner'});save();closeSheet('sheet-task');renderTasks();updateSummary();renderDashboard();const emp=state.employees.find(e=>e.id===assignee);toast(emp?'Task assigned to '+emp.name:'Task created!')});
 
 // ===== WAGES =====
 function openWage(emp){$('#wage-emp-id').value=emp.id;$('#wage-emp-name').value=emp.name;const n=new Date();$('#wage-month').value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');$('#wage-amount').value=emp.wage||'';$$('.wage-status-btn').forEach(b=>b.classList.remove('active'));$('.wage-status-btn[data-status="paid"]').classList.add('active');openSheet('sheet-wage')}
@@ -335,13 +339,13 @@ $('#btn-download-wage-report').addEventListener('click',()=>{
   const from=$('#wage-report-from').value,to=$('#wage-report-to').value;if(!from||!to){toast('Select month range');return}
   const wf=state.wages.filter(w=>w.month>=from&&w.month<=to).sort((a,b)=>a.month.localeCompare(b.month));
   if(!wf.length){toast('No wage records');return}
-  let csv='Employee,Role,Phone,Month,Amount (Rs),Status\n';
+  let csv='Employee,Role,Phone,Month,Amount (₹),Status\n';
   wf.forEach(w=>{const emp=state.employees.find(e=>e.id===w.empId);csv+=`"${emp?emp.name:'Unknown'}","${emp?emp.role||'':''}","${emp?emp.phone||'':''}","${w.month}",${w.amount},"${w.status}"\n`});
   downloadCSV('wages-'+from+'-to-'+to+'.csv',csv);toast('Report downloaded');
 });
 $('#btn-download-emp-report').addEventListener('click',()=>{
   if(!state.employees.length){toast('No employees');return}
-  let csv='Name,Role,Phone,Joining Date,Govt ID,Monthly Wage (Rs),Status\n';
+  let csv='Name,Role,Phone,Joining Date,Govt ID,Monthly Wage (₹),Status\n';
   state.employees.forEach(e=>csv+=`"${e.name}","${e.role||''}","${e.phone||''}","${e.joiningDate||''}","${e.govtId||''}","${e.wage||''}","${e.status||'active'}"\n`);
   downloadCSV('employees-'+today()+'.csv',csv);toast('Report downloaded');
 });
@@ -354,10 +358,54 @@ $('#btn-download-leave-report').addEventListener('click',()=>{
 });
 
 function updateSummary(){
-  $('#summary-employees').textContent=activeEmps().length;
-  const td=state.attendance[today()]||{};$('#summary-present').textContent=Object.values(td).filter(v=>v==='P'||v==='H').length;
+  const ae=activeEmps();
+  $('#summary-employees').textContent=ae.length;
+  const td=state.attendance[today()]||{};
+  const presentCount=ae.filter(e=>td[e.id]==='P'||td[e.id]==='H').length;
+  $('#summary-present').textContent=presentCount;
   $('#summary-tasks-pending').textContent=state.tasks.filter(t=>t.status==='pending').length;
   $('#summary-tasks-overdue').textContent=state.tasks.filter(t=>isOverdue(t)).length;
+  renderDashboard();
+}
+
+// Dashboard card clicks
+$('#dash-card-employees').addEventListener('click',()=>{$$('.nav-item[data-tab]')[0].click()});
+$('#dash-card-present').addEventListener('click',()=>{$$('.nav-item[data-tab]')[1].click()});
+$('#dash-card-pending').addEventListener('click',()=>{taskFilter='pending';$$('[data-filter]').forEach(x=>x.classList.remove('active'));$$('[data-filter="pending"]').forEach(x=>x.classList.add('active'));renderTasks();$$('.nav-item[data-tab]')[2].click()});
+$('#dash-card-overdue').addEventListener('click',()=>{taskFilter='overdue';$$('[data-filter]').forEach(x=>x.classList.remove('active'));$$('[data-filter="overdue"]').forEach(x=>x.classList.add('active'));renderTasks();$$('.nav-item[data-tab]')[2].click()});
+
+function renderDashboard(){
+  const ae=activeEmps(),td=state.attendance[today()]||{};
+  // Attendance breakdown
+  let pCount=0,aCount=0,hCount=0,unmarked=0;
+  ae.forEach(e=>{const s=td[e.id];if(s==='P')pCount++;else if(s==='A')aCount++;else if(s==='H')hCount++;else unmarked++});
+  const total=ae.length||1;
+  const attEl=$('#dash-att-breakdown');
+  if(!ae.length){attEl.innerHTML='<p class="dash-empty">Add employees to see attendance</p>'}
+  else{attEl.innerHTML=`<div class="dash-att-bar">${pCount?`<div style="width:${pCount/total*100}%;background:#059669">${pCount}</div>`:''}${hCount?`<div style="width:${hCount/total*100}%;background:#d97706">${hCount}</div>`:''}${aCount?`<div style="width:${aCount/total*100}%;background:#dc2626">${aCount}</div>`:''}${unmarked?`<div style="width:${unmarked/total*100}%;background:var(--border)">${unmarked}</div>`:''}</div><div class="dash-att-legend"><span><i style="background:#059669"></i>Present ${pCount}</span><span><i style="background:#d97706"></i>Half ${hCount}</span><span><i style="background:#dc2626"></i>Absent ${aCount}</span><span><i style="background:var(--border)"></i>Unmarked ${unmarked}</span></div>`}
+
+  // Upcoming tasks (pending/overdue, sorted by due date, max 5)
+  const upcoming=[...state.tasks].filter(t=>t.status==='pending').map(t=>({...t,isOD:isOverdue(t)})).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999')).slice(0,5);
+  const tasksEl=$('#dash-upcoming-tasks');
+  if(!upcoming.length){tasksEl.innerHTML='<p class="dash-empty">No pending tasks</p>'}
+  else{tasksEl.innerHTML=upcoming.map(t=>{const emp=state.employees.find(e=>e.id===t.assigneeId);return`<div class="dash-mini-card" data-task-id="${t.id}"><div class="dash-mini-left"><div class="dash-mini-title">${esc(t.title)}</div><div class="dash-mini-sub">${emp?esc(emp.name):'Unassigned'}${t.dueDate?' · Due '+fmtDate(t.dueDate):''}</div></div><span class="task-status-badge ${t.isOD?'overdue':'pending'}">${t.isOD?'overdue':'pending'}</span></div>`}).join('');
+  tasksEl.querySelectorAll('.dash-mini-card').forEach(c=>c.addEventListener('click',()=>showTaskDetail(c.dataset.taskId)))}
+
+  // Recent leaves (last 5)
+  const recentLeaves=[...state.leaves].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,5);
+  const leavesEl=$('#dash-recent-leaves');
+  if(!recentLeaves.length){leavesEl.innerHTML='<p class="dash-empty">No leave requests</p>'}
+  else{leavesEl.innerHTML=recentLeaves.map(l=>{const emp=state.employees.find(e=>e.id===l.empId);return`<div class="dash-mini-card" data-leave-id="${l.id}"><div class="dash-mini-left"><div class="dash-mini-title">${emp?esc(emp.name):'Unknown'} · ${l.type} leave</div><div class="dash-mini-sub">${fmtDate(l.fromDate)} — ${fmtDate(l.toDate)}</div></div><span class="task-status-badge ${l.status}">${l.status}</span></div>`}).join('');
+  leavesEl.querySelectorAll('.dash-mini-card').forEach(c=>c.addEventListener('click',()=>showLeaveDetail(c.dataset.leaveId)))}
+
+  // Wage summary this month
+  const curMonth=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  const monthWages=state.wages.filter(w=>w.month===curMonth);
+  const totalWage=ae.reduce((s,e)=>s+Number(e.wage||0),0);
+  const paidWage=monthWages.filter(w=>w.status==='paid').reduce((s,w)=>s+Number(w.amount||0),0);
+  const unpaidWage=totalWage-paidWage;
+  const wageEl=$('#dash-wage-summary');
+  wageEl.innerHTML=`<div class="dash-wage-row"><span class="dash-wage-label">Total Payroll</span><span class="dash-wage-value">₹${totalWage.toLocaleString('en-IN')}</span></div><div class="dash-wage-row"><span class="dash-wage-label">Paid</span><span class="dash-wage-value" style="color:var(--accent)">₹${paidWage.toLocaleString('en-IN')}</span></div><div class="dash-wage-row"><span class="dash-wage-label">Unpaid</span><span class="dash-wage-value" style="color:${unpaidWage>0?'var(--danger)':'var(--text)'}">₹${unpaidWage.toLocaleString('en-IN')}</span></div>`;
 }
 
 // ===== HAMBURGER MENU =====
@@ -372,12 +420,9 @@ $('#hamburger-overlay').addEventListener('click',closeHamburger);
 $('#hmenu-download-reports').addEventListener('click',()=>{closeHamburger();initReportDefaults();updateDropdowns();openSheet('sheet-download-reports')});
 $('#hmenu-permissions').addEventListener('click',()=>{closeHamburger();openPermissionsSheet()});
 $('#hmenu-settings').addEventListener('click',()=>{closeHamburger();openSettings()});
-$('#hmenu-export').addEventListener('click',()=>{closeHamburger();const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='kaamkar-backup-'+today()+'.json';a.click();URL.revokeObjectURL(u);toast('Data exported')});
+$('#hmenu-export').addEventListener('click',()=>{closeHamburger();const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='workmitra-backup-'+today()+'.json';a.click();URL.revokeObjectURL(u);toast('Data exported')});
 $('#hmenu-logout').addEventListener('click',()=>{closeHamburger();clearSession();showScreen('screen-role-select');toast('Logged out')});
 
-// Dashboard quick links
-$('#btn-quick-download-reports').addEventListener('click',()=>{initReportDefaults();updateDropdowns();openSheet('sheet-download-reports')});
-$('#btn-quick-permissions').addEventListener('click',()=>openPermissionsSheet());
 
 // ===== SETTINGS =====
 function openSettings(){
@@ -397,19 +442,17 @@ function openPermissionsSheet(){
   ];
   const list=$('#permissions-list');
   list.innerHTML=permDefs.map(p=>{
-    const current=state.permissions[p.key];
-    return`<div class="perm-card"><div class="perm-card-header"><div class="perm-card-title">${p.label}</div></div><div class="perm-card-desc">${p.desc}</div><select data-perm="${p.key}"><option value="">Owner only</option>${active.map(e=>`<option value="${e.id}"${current===e.id?' selected':''}>${esc(e.name)}${e.role?' — '+esc(e.role):''}</option>`).join('')}</select><div class="perm-enables"><strong>This enables:</strong> ${p.enables}</div></div>`
+    const current=state.permissions[p.key]||[];
+    return`<div class="perm-card"><div class="perm-card-header"><div class="perm-card-title">${p.label}</div></div><div class="perm-card-desc">${p.desc}</div><div class="perm-enables"><strong>This enables:</strong> ${p.enables}</div><div class="perm-checkboxes" data-perm="${p.key}"><label class="perm-check-item"><input type="checkbox" value="owner" ${current.includes('owner')?'checked':''}><span class="perm-check-name">${esc(state.ownerName)} <span class="access-role-badge" style="font-size:10px">Owner</span></span></label>${active.map(e=>`<label class="perm-check-item"><input type="checkbox" value="${e.id}" ${current.includes(e.id)?'checked':''}><span class="perm-check-name">${esc(e.name)}${e.role?' — '+esc(e.role):''}</span></label>`).join('')}</div></div>`
   }).join('');
-  list.querySelectorAll('select[data-perm]').forEach(sel=>sel.addEventListener('change',()=>{
-    state.permissions[sel.dataset.perm]=sel.value||null;
-    // Update accessRole on employees for backward compatibility
-    state.employees.forEach(e=>{
-      e.accessRole=null;
-      if(state.permissions.leaveApproval===e.id)e.accessRole='hr';
-      if(state.permissions.salaryPayout===e.id||state.permissions.reports===e.id)e.accessRole='accountant';
-    });
-    save();toast('Permission updated');
-  }));
+  list.querySelectorAll('.perm-checkboxes').forEach(wrap=>{
+    wrap.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',()=>{
+      const key=wrap.dataset.perm;
+      const checked=Array.from(wrap.querySelectorAll('input:checked')).map(c=>c.value);
+      state.permissions[key]=checked;
+      save();toast('Permission updated');
+    }));
+  });
   openSheet('sheet-permissions');
 }
 
@@ -420,8 +463,8 @@ function initEmployeeApp(emp){
   currentEmpId=emp.id;
   $('#emp-header-name').textContent=emp.name;
   // Show/hide HR & accountant tabs based on permissions
-  const isHR=state.permissions.leaveApproval===emp.id;
-  const isAccountant=state.permissions.salaryPayout===emp.id||state.permissions.reports===emp.id;
+  const isHR=hasPerm('leaveApproval',emp.id);
+  const isAccountant=hasPerm('salaryPayout',emp.id)||hasPerm('reports',emp.id);
   const hrNav=$('#emp-nav-hr');if(hrNav)hrNav.style.display=isHR?'':'none';
   const accNav=$('#emp-nav-accountant');if(accNav)accNav.style.display=isAccountant?'':'none';
   renderEmpTasks();renderEmpAttendance();renderEmpLeaves();renderEmpPayouts();
@@ -451,15 +494,25 @@ function renderEmpTasks(){
   list.querySelectorAll('.task-card').forEach(c=>c.addEventListener('click',()=>showTaskDetail(c.dataset.id,true)));
 }
 
+let empAttFilter='all';
 function renderEmpAttendance(){
   const body=$('#emp-att-summary'),hist=$('#emp-att-history');
-  const td=new Date(),days=[];
-  for(let i=0;i<30;i++){const d=new Date(td);d.setDate(d.getDate()-i);days.push({date:d,ds:localDateStr(d)})}
+  const monthInput=$('#emp-att-month');
+  // Default month picker to current month if empty
+  if(!monthInput.value){const n=new Date();monthInput.value=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')}
+  const parts=monthInput.value.split('-');const yr=parseInt(parts[0]),mo=parseInt(parts[1]);
+  const daysInMonth=new Date(yr,mo,0).getDate();
+  const days=[];
+  for(let i=daysInMonth;i>=1;i--){const d=new Date(yr,mo-1,i);const ds=localDateStr(d);if(ds<=today())days.push({date:d,ds})}
   let p=0,a=0,h=0;
   days.forEach(d=>{const s=(state.attendance[d.ds]||{})[currentEmpId];if(s==='P')p++;else if(s==='A')a++;else if(s==='H')h++});
   body.innerHTML=`<div class="emp-att-stat"><span class="stat-num stat-present">${p}</span><span class="stat-label">Present</span></div><div class="emp-att-stat"><span class="stat-num stat-absent">${a}</span><span class="stat-label">Absent</span></div><div class="emp-att-stat"><span class="stat-num stat-half">${h}</span><span class="stat-label">Half Day</span></div>`;
-  hist.innerHTML=`<div style="padding:0 16px 16px"><h4 style="font-size:14px;font-weight:700;color:var(--text-secondary);margin-bottom:8px">LAST 30 DAYS</h4>${days.map(d=>{const s=(state.attendance[d.ds]||{})[currentEmpId];return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)"><span style="font-size:14px;color:var(--text-secondary)">${d.date.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}</span><span class="att-history-cell ${s==='P'?'present':s==='A'?'absent':s==='H'?'half':''}">${s==='P'?'Present':s==='A'?'Absent':s==='H'?'Half Day':'—'}</span></div>`}).join('')}</div>`;
+  let filtered=days;
+  if(empAttFilter!=='all')filtered=days.filter(d=>(state.attendance[d.ds]||{})[currentEmpId]===empAttFilter);
+  hist.innerHTML=`<div style="padding:0 16px 16px">${filtered.map(d=>{const s=(state.attendance[d.ds]||{})[currentEmpId];return`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)"><span style="font-size:14px;color:var(--text-secondary)">${d.date.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}</span><span class="att-history-cell ${s==='P'?'present':s==='A'?'absent':s==='H'?'half':''}">${s==='P'?'Present':s==='A'?'Absent':s==='H'?'Half Day':'—'}</span></div>`}).join('')}${!filtered.length?'<p class="dash-empty">No records for this filter</p>':''}</div>`;
 }
+$('#emp-att-month').addEventListener('change',()=>renderEmpAttendance());
+$$('[data-emp-att-filter]').forEach(c=>c.addEventListener('click',()=>{$$('[data-emp-att-filter]').forEach(x=>x.classList.remove('active'));c.classList.add('active');empAttFilter=c.dataset.empAttFilter;renderEmpAttendance()}));
 
 function renderEmpLeaves(){
   const leaves=state.leaves.filter(l=>l.empId===currentEmpId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
@@ -468,7 +521,7 @@ function renderEmpLeaves(){
   $('#emp-leaves-list').innerHTML=leaves.map(l=>`<div class="leave-card ${l.status}" data-id="${l.id}"><div class="leave-card-header"><div><span class="leave-type-badge">${l.type} leave</span></div><span class="task-status-badge ${l.status}">${l.status}</span></div><div class="leave-card-meta"><span>${fmtDate(l.fromDate)} — ${fmtDate(l.toDate)}</span>${l.reason?`<span>${esc(l.reason)}</span>`:''}</div></div>`).join('');
   // Employees can only VIEW their leaves, no approve/reject
   $('#emp-leaves-list').querySelectorAll('.leave-card').forEach(c=>c.addEventListener('click',()=>{
-    const hasLeavePermission=state.permissions.leaveApproval===currentEmpId;
+    const hasLeavePermission=hasPerm('leaveApproval',currentEmpId);
     if(hasLeavePermission){
       showLeaveDetail(c.dataset.id);
     } else {
@@ -490,7 +543,7 @@ function renderEmpPayouts(){
   const wages=state.wages.filter(w=>w.empId===currentEmpId).sort((a,b)=>b.month.localeCompare(a.month));
   if(!wages.length){$('#emp-payouts-empty').style.display='';$('#emp-payouts-list').innerHTML='';return}
   $('#emp-payouts-empty').style.display='none';
-  $('#emp-payouts-list').innerHTML=wages.map(w=>`<div class="emp-payout-card"><div><div class="emp-payout-month">${w.month}</div></div><div style="text-align:right"><div class="emp-payout-amount">Rs. ${Number(w.amount).toLocaleString('en-IN')}</div><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}" style="margin-top:4px">${w.status}</span></div></div>`).join('');
+  $('#emp-payouts-list').innerHTML=wages.map(w=>`<div class="emp-payout-card"><div><div class="emp-payout-month">${w.month}</div></div><div style="text-align:right"><div class="emp-payout-amount">₹${Number(w.amount).toLocaleString('en-IN')}</div><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}" style="margin-top:4px">${w.status}</span></div></div>`).join('');
 }
 
 $('#btn-emp-request-leave').addEventListener('click',()=>openLeaveSheet(currentEmpId,true));
@@ -500,9 +553,9 @@ $('#btn-emp-profile').addEventListener('click',()=>{
   const emp=state.employees.find(e=>e.id===currentEmpId);if(!emp)return;
   // Derive permissions for display
   const permLabels=[];
-  if(state.permissions.leaveApproval===emp.id)permLabels.push('Leave Approval');
-  if(state.permissions.salaryPayout===emp.id)permLabels.push('Salary Payout');
-  if(state.permissions.reports===emp.id)permLabels.push('Reports');
+  if(hasPerm('leaveApproval',emp.id))permLabels.push('Leave Approval');
+  if(hasPerm('salaryPayout',emp.id))permLabels.push('Salary Payout');
+  if(hasPerm('reports',emp.id))permLabels.push('Reports');
   const body=$('#emp-profile-body');
   body.innerHTML=`<div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div>${permLabels.length?`<div style="margin-top:8px">${permLabels.map(l=>`<span class="access-role-badge" style="margin:2px">${l}</span>`).join('')}</div>`:''}</div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div><div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div></div><div style="padding-top:16px"><button class="btn btn-danger-outline btn-full" id="btn-emp-logout"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div>`;
   body.querySelector('#btn-emp-logout').addEventListener('click',()=>{currentEmpId=null;clearSession();closeSheet('sheet-emp-profile');showScreen('screen-role-select');toast('Logged out')});
@@ -518,14 +571,14 @@ $('#form-emp-exit').addEventListener('submit',e=>{
   e.preventDefault();const eid=$('#exit-emp-id').value,emp=state.employees.find(x=>x.id===eid);if(!emp)return;
   emp.status='exited';emp.exitDate=$('#exit-date').value;emp.exitReason=$('#exit-reason').value;
   // Clean up permissions for exited employee
-  Object.keys(state.permissions).forEach(k=>{if(state.permissions[k]===eid)state.permissions[k]=null});
+  Object.keys(state.permissions).forEach(k=>{if(Array.isArray(state.permissions[k]))state.permissions[k]=state.permissions[k].filter(id=>id!==eid)});
   save();closeSheet('sheet-emp-exit');renderEmployees();renderAttendance();updateDropdowns();updateSummary();toast(emp.name+' marked as exited');
 });
 
 // ===== OFFER LETTER =====
 function showOfferLetter(emp){
   const body=$('#offer-letter-body');
-  body.innerHTML=`<div class="letter-preview"><h4>OFFER LETTER</h4><p>Date: ${fmtDate(today())}</p><p>Dear <span class="field">${esc(emp.name)}</span>,</p><p>We are pleased to offer you the position of <span class="field">${esc(emp.role||'Employee')}</span> at <span class="field">${esc(state.businessName)}</span>.</p><p>Your joining date is <span class="field">${emp.joiningDate?fmtDate(emp.joiningDate):'[To be decided]'}</span>.</p><p>Your monthly compensation will be <span class="field">${emp.wage?'Rs. '+Number(emp.wage).toLocaleString('en-IN'):'[To be decided]'}</span>.</p><p>We look forward to having you on our team.</p><p style="margin-top:16px">Regards,<br><span class="field">${esc(state.ownerName)}</span><br>${esc(state.businessName)}</p></div><button class="btn btn-primary btn-full" disabled>Generate Offer Letter (Coming Soon)</button><p class="letter-coming-soon">Auto-generated offer letters with digital signatures - coming in v2</p>`;
+  body.innerHTML=`<div class="letter-preview"><h4>OFFER LETTER</h4><p>Date: ${fmtDate(today())}</p><p>Dear <span class="field">${esc(emp.name)}</span>,</p><p>We are pleased to offer you the position of <span class="field">${esc(emp.role||'Employee')}</span> at <span class="field">${esc(state.businessName)}</span>.</p><p>Your joining date is <span class="field">${emp.joiningDate?fmtDate(emp.joiningDate):'[To be decided]'}</span>.</p><p>Your monthly compensation will be <span class="field">${emp.wage?'₹'+Number(emp.wage).toLocaleString('en-IN'):'[To be decided]'}</span>.</p><p>We look forward to having you on our team.</p><p style="margin-top:16px">Regards,<br><span class="field">${esc(state.ownerName)}</span><br>${esc(state.businessName)}</p></div><button class="btn btn-primary btn-full" disabled>Generate Offer Letter (Coming Soon)</button><p class="letter-coming-soon">Auto-generated offer letters with digital signatures - coming in v2</p>`;
   openSheet('sheet-offer-letter');
 }
 
@@ -548,10 +601,10 @@ function renderPayoutList(){
   list.innerHTML=active.map(emp=>{
     const existing=state.wages.find(w=>w.empId===emp.id&&w.month===payoutMonth);
     const isPaid=existing&&existing.status==='paid';
-    return`<div class="payout-row"><label><input type="checkbox" data-emp-id="${emp.id}" ${isPaid?'':'checked'}${isPaid?' disabled':''}><span>${esc(emp.name)}</span></label><div class="payout-info">${esc(emp.role||'')}<br><strong>Rs. ${emp.wage?Number(emp.wage).toLocaleString('en-IN'):'0'}</strong>${isPaid?'<br><span style="color:var(--accent);font-size:11px;font-weight:700">PAID</span>':''}</div></div>`
+    return`<div class="payout-row"><label><input type="checkbox" data-emp-id="${emp.id}" ${isPaid?'':'checked'}${isPaid?' disabled':''}><span>${esc(emp.name)}</span></label><div class="payout-info">${esc(emp.role||'')}<br><strong>₹${emp.wage?Number(emp.wage).toLocaleString('en-IN'):'0'}</strong>${isPaid?'<br><span style="color:var(--accent);font-size:11px;font-weight:700">PAID</span>':''}</div></div>`
   }).join('');
   const totalWage=active.filter(e=>{const ex=state.wages.find(w=>w.empId===e.id&&w.month===payoutMonth);return!(ex&&ex.status==='paid')}).reduce((s,e)=>s+Number(e.wage||0),0);
-  list.innerHTML+=`<div class="payout-total">Unpaid Total: Rs. ${totalWage.toLocaleString('en-IN')}</div>`;
+  list.innerHTML+=`<div class="payout-total">Unpaid Total: ₹${totalWage.toLocaleString('en-IN')}</div>`;
 }
 $('#payout-month').addEventListener('change',e=>{payoutMonth=e.target.value;renderPayoutList()});
 $('#btn-cancel-payout').addEventListener('click',()=>closeSheet('sheet-salary-payout'));
@@ -560,7 +613,7 @@ $('#btn-confirm-payout').addEventListener('click',()=>{
   if(!checks.length){toast('No employees to pay');return}
   let total=0;const names=[];
   checks.forEach(cb=>{const emp=state.employees.find(e=>e.id===cb.dataset.empId);if(emp){total+=Number(emp.wage||0);names.push(emp.name)}});
-  if(!confirm('Pay Rs. '+total.toLocaleString('en-IN')+' to '+checks.length+' employee(s) for '+payoutMonth+'?'))return;
+  if(!confirm('Pay ₹'+total.toLocaleString('en-IN')+' to '+checks.length+' employee(s) for '+payoutMonth+'?'))return;
   checks.forEach(cb=>{
     const empId=cb.dataset.empId,emp=state.employees.find(e=>e.id===empId);if(!emp)return;
     const ex=state.wages.find(w=>w.empId===empId&&w.month===payoutMonth);
@@ -569,7 +622,7 @@ $('#btn-confirm-payout').addEventListener('click',()=>{
   });
   save();closeSheet('sheet-salary-payout');toast('Salary marked as paid for '+checks.length+' employee(s)');
 });
-$('#btn-salary-payout').addEventListener('click',openSalaryPayout);
+$('#hmenu-salary-payout').addEventListener('click',()=>{closeHamburger();openSalaryPayout()});
 
 // ===== HR ATTENDANCE (Employee with HR role) =====
 let hrAttDate=today();
@@ -603,7 +656,7 @@ function renderAccountantWages(){
   if(!wages.length){$('#accountant-wages-empty').style.display='';$('#accountant-wages-list').innerHTML='';return}
   $('#accountant-wages-empty').style.display='none';
   let html='<table class="wage-table"><thead><tr><th>Employee</th><th>Month</th><th>Amount</th><th>Status</th></tr></thead><tbody>';
-  wages.forEach(w=>{const emp=state.employees.find(e=>e.id===w.empId);html+=`<tr><td>${emp?esc(emp.name):'Unknown'}</td><td>${w.month}</td><td>Rs. ${Number(w.amount).toLocaleString('en-IN')}</td><td><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}">${w.status}</span></td></tr>`});
+  wages.forEach(w=>{const emp=state.employees.find(e=>e.id===w.empId);html+=`<tr><td>${emp?esc(emp.name):'Unknown'}</td><td>${w.month}</td><td>₹${Number(w.amount).toLocaleString('en-IN')}</td><td><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}">${w.status}</span></td></tr>`});
   html+='</tbody></table>';
   $('#accountant-wages-list').innerHTML=html;
 }
