@@ -461,10 +461,12 @@ function initEmployeeApp(emp){
   const isHR=hasPerm('leaveApproval',emp.id);
   const isAccountant=hasPerm('salaryPayout',emp.id)||hasPerm('reports',emp.id);
   const hasAnyPerm=isHR||isAccountant;
+  const canPayout=hasPerm('salaryPayout',emp.id);
   $('#ehmenu-mark-attendance').style.display=isHR?'':'none';
   $('#ehmenu-approve-leaves').style.display=isHR?'':'none';
+  $('#ehmenu-salary-payout').style.display=canPayout?'':'none';
   $('#ehmenu-wage-records').style.display=isAccountant?'':'none';
-  $('#ehmenu-perm-divider').style.display=hasAnyPerm?'':'none';
+  $('#ehmenu-perm-divider').style.display=(hasAnyPerm||canPayout)?'':'none';
   $('#emp-hamburger-name').textContent=emp.name;
   $('#emp-hamburger-role').textContent=emp.role||'Employee';
   renderEmpTasks();renderEmpAttendance();renderEmpLeaves();renderEmpPayouts();
@@ -555,6 +557,7 @@ $('#btn-emp-hamburger').addEventListener('click',openEmpHamburger);
 $('#emp-hamburger-overlay').addEventListener('click',closeEmpHamburger);
 $('#ehmenu-mark-attendance').addEventListener('click',()=>{closeEmpHamburger();$$('#screen-emp-main .tab-panel').forEach(p=>p.classList.remove('active'));$('#etab-hr-attendance').classList.add('active');$('#emp-bottom-nav').querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'))});
 $('#ehmenu-approve-leaves').addEventListener('click',()=>{closeEmpHamburger();$$('#screen-emp-main .tab-panel').forEach(p=>p.classList.remove('active'));$('#etab-leaves').classList.add('active');$('#emp-bottom-nav').querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));$('#emp-bottom-nav [data-emp-tab="etab-leaves"]').classList.add('active')});
+$('#ehmenu-salary-payout').addEventListener('click',()=>{closeEmpHamburger();openSalaryPayout()});
 $('#ehmenu-wage-records').addEventListener('click',()=>{closeEmpHamburger();$$('#screen-emp-main .tab-panel').forEach(p=>p.classList.remove('active'));$('#etab-wages').classList.add('active');$('#emp-bottom-nav').querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'))});
 $('#ehmenu-profile').addEventListener('click',()=>{
   closeEmpHamburger();
@@ -669,7 +672,18 @@ function renderAccountantWages(){
 }
 
 // ===== SHEET HELPERS =====
-function openSheet(i){$('#'+i).classList.add('open')}
+function openSheet(i){
+  const sheet=$('#'+i);
+  const content=sheet.querySelector('.sheet-content');
+  if(content&&!content.querySelector('.sheet-close-btn')){
+    const btn=document.createElement('button');
+    btn.className='sheet-close-btn';btn.setAttribute('aria-label','Close');btn.innerHTML='&times;';
+    btn.addEventListener('click',()=>closeSheet(i));
+    const handle=content.querySelector('.sheet-handle');
+    if(handle)handle.after(btn);else content.prepend(btn);
+  }
+  sheet.classList.add('open');
+}
 function closeSheet(i){$('#'+i).classList.remove('open')}
 $$('.sheet-overlay').forEach(o=>o.addEventListener('click',()=>o.closest('.bottom-sheet').classList.remove('open')));
 
