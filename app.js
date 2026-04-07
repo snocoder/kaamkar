@@ -1,25 +1,29 @@
 (function(){
 'use strict';
 const DB='kaamkar_data';
+const SESSION='kaamkar_session';
 let state=load();
-function defaults(){return{onboarded:false,phone:'',businessName:'',ownerName:'',businessType:'',email:'',address:'',city:'',bizState:'',pincode:'',gst:'',employees:[],attendance:{},tasks:[],wages:[],leaves:[]}}
+function defaults(){return{onboarded:false,phone:'',businessName:'',ownerName:'',businessType:'',email:'',address:'',city:'',bizState:'',pincode:'',gst:'',employees:[],attendance:{},tasks:[],wages:[],leaves:[],permissions:{leaveApproval:null,salaryPayout:null,reports:null}}}
 function ensureEmpDefaults(e){if(!e.status)e.status='active';if(!e.accessRole)e.accessRole=null;return e}
-function load(){try{const r=localStorage.getItem(DB);if(r){const d={...defaults(),...JSON.parse(r)};d.employees=(d.employees||[]).map(ensureEmpDefaults);return d}}catch(e){}return defaults()}
+function load(){try{const r=localStorage.getItem(DB);if(r){const d={...defaults(),...JSON.parse(r)};d.employees=(d.employees||[]).map(ensureEmpDefaults);if(!d.permissions)d.permissions={leaveApproval:null,salaryPayout:null,reports:null};return d}}catch(e){}return defaults()}
 function save(){localStorage.setItem(DB,JSON.stringify(state))}
+function saveSession(role,empId){localStorage.setItem(SESSION,JSON.stringify({role,empId:empId||null}))}
+function clearSession(){localStorage.removeItem(SESSION)}
+function getSession(){try{return JSON.parse(localStorage.getItem(SESSION))}catch(e){return null}}
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
 function avatarCls(i){let h=0;for(let c=0;c<i.length;c++)h=(h*31+i.charCodeAt(c))%10;return'avatar-'+h}
 function ini(n){const p=n.trim().split(/\s+/);return p.length>=2?(p[0][0]+p[1][0]).toUpperCase():n.slice(0,2).toUpperCase()}
 function fmtDate(d){return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
-function today(){return new Date().toISOString().slice(0,10)}
+function localDateStr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function today(){return localDateStr(new Date())}
 function isOverdue(t){return t.status==='pending'&&t.dueDate&&t.dueDate<today()}
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function daysBetween(f,t){const days=[],d=new Date(f+'T00:00:00'),end=new Date(t+'T00:00:00');while(d<=end){days.push(d.toISOString().slice(0,10));d.setDate(d.getDate()+1)}return days}
+function daysBetween(f,t){const days=[],d=new Date(f+'T00:00:00'),end=new Date(t+'T00:00:00');while(d<=end){days.push(localDateStr(d));d.setDate(d.getDate()+1)}return days}
 
-// Toast - fixed with proper cleanup
+// Toast - at top, auto-dismiss
 let toastTimer=null;
-function toast(msg){const t=$('#toast');if(toastTimer)clearTimeout(toastTimer);t.textContent=msg;t.classList.remove('show');void t.offsetWidth; // force reflow
-t.classList.add('show');toastTimer=setTimeout(()=>{t.classList.remove('show');toastTimer=null},2500)}
+function toast(msg){const t=$('#toast');if(toastTimer){clearTimeout(toastTimer);toastTimer=null}t.textContent=msg;t.classList.remove('show');void t.offsetWidth;t.classList.add('show');toastTimer=setTimeout(()=>{t.classList.remove('show');toastTimer=null},2200)}
 
 function downloadCSV(fn,csv){const b=new Blob([csv],{type:'text/csv;charset=utf-8;'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=fn;a.click();URL.revokeObjectURL(u)}
 
@@ -28,7 +32,7 @@ function showScreen(id){$$('.screen').forEach(s=>s.classList.remove('active'));$
 
 // ===== ROLE SELECT =====
 $('#role-owner').addEventListener('click',()=>{
-  if(state.onboarded){showScreen('screen-main');initOwnerApp();return}
+  if(state.onboarded){saveSession('owner');showScreen('screen-main');initOwnerApp();return}
   showScreen('screen-onboard-phone')
 });
 $('#role-employee').addEventListener('click',()=>showScreen('screen-emp-login'));
@@ -50,7 +54,7 @@ $$('[data-back]').forEach(b=>b.addEventListener('click',()=>showScreen(b.dataset
 const bizIn=$('#business-name'),ownIn=$('#owner-name'),btnStart=$('#btn-start');
 function chkBiz(){btnStart.disabled=!(bizIn.value.trim()&&ownIn.value.trim())}
 bizIn.addEventListener('input',chkBiz);ownIn.addEventListener('input',chkBiz);
-btnStart.addEventListener('click',()=>{state.businessName=bizIn.value.trim();state.ownerName=ownIn.value.trim();state.onboarded=true;save();showScreen('screen-main');initOwnerApp()});
+btnStart.addEventListener('click',()=>{state.businessName=bizIn.value.trim();state.ownerName=ownIn.value.trim();state.onboarded=true;save();saveSession('owner');showScreen('screen-main');initOwnerApp()});
 
 // ===== EMPLOYEE LOGIN =====
 const empLoginPhone=$('#emp-login-phone'),btnEmpLogin=$('#btn-emp-login');
@@ -60,14 +64,22 @@ btnEmpLogin.addEventListener('click',()=>{
   const emp=state.employees.find(e=>e.phone===ph);
   if(!emp){$('#emp-login-error').style.display='';return}
   currentEmpId=emp.id;
+  saveSession('employee',emp.id);
   showScreen('screen-emp-main');
   initEmployeeApp(emp);
 });
 
 // ===== INIT ON LOAD =====
 function initOnLoad(){
-  if(state.onboarded)showScreen('screen-role-select');
-  else showScreen('screen-role-select');
+  const session=getSession();
+  if(session&&session.role==='owner'&&state.onboarded){
+    showScreen('screen-main');initOwnerApp();return;
+  }
+  if(session&&session.role==='employee'&&session.empId){
+    const emp=state.employees.find(e=>e.id===session.empId);
+    if(emp){currentEmpId=emp.id;showScreen('screen-emp-main');initEmployeeApp(emp);return}
+  }
+  showScreen('screen-role-select');
 }
 
 // ===== OWNER APP =====
@@ -121,9 +133,14 @@ function showEmpDetail(eid){
   const emp=state.employees.find(e=>e.id===eid);if(!emp)return;ensureEmpDefaults(emp);
   const wages=state.wages.filter(w=>w.empId===eid).sort((a,b)=>b.month.localeCompare(a.month));
   const isExited=emp.status==='exited';
+  // Derive permissions for display
+  const permLabels=[];
+  if(state.permissions.leaveApproval===eid)permLabels.push('Leave Approval');
+  if(state.permissions.salaryPayout===eid)permLabels.push('Salary Payout');
+  if(state.permissions.reports===eid)permLabels.push('Reports');
   const body=$('#emp-detail-body');
   body.innerHTML=`
-    <div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}${isExited?'<span class="exited-badge" style="margin-left:8px">EXITED</span>':''}${emp.accessRole?'<span class="access-role-badge" style="margin-left:8px">'+emp.accessRole.toUpperCase()+'</span>':''}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div></div>
+    <div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}${isExited?'<span class="exited-badge" style="margin-left:8px">EXITED</span>':''}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div>${permLabels.length?`<div style="margin-top:6px">${permLabels.map(l=>`<span class="access-role-badge" style="margin:2px">${l}</span>`).join('')}</div>`:''}</div>
     <div class="detail-grid">
       <div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div>
       <div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div>
@@ -154,17 +171,19 @@ function showEmpDetail(eid){
       state.employees=state.employees.filter(e=>e.id!==eid);state.tasks=state.tasks.filter(t=>t.assigneeId!==eid);
       Object.keys(state.attendance).forEach(d=>delete(state.attendance[d]||{})[eid]);
       state.wages=state.wages.filter(w=>w.empId!==eid);state.leaves=state.leaves.filter(l=>l.empId!==eid);
+      // Clean up permissions
+      Object.keys(state.permissions).forEach(k=>{if(state.permissions[k]===eid)state.permissions[k]=null});
       save();closeSheet('sheet-emp-detail');renderEmployees();renderAttendance();renderTasks();renderLeaves();updateSummary();updateDropdowns();toast('Employee deleted');
     }
   });
   openSheet('sheet-emp-detail');
 }
 
-function openAddEmp(){$('#sheet-emp-title').textContent='Add Employee';$('#emp-edit-id').value='';$('#emp-name').value='';$('#emp-role').value='';$('#emp-access-role').value='';$('#emp-phone').value='';$('#emp-joining').value='';$('#emp-govtid').value='';$('#emp-wage').value='';$('#emp-optional-fields').style.display='none';$('#toggle-emp-optional').textContent='+ More details (optional)';openSheet('sheet-employee');setTimeout(()=>$('#emp-name').focus(),300)}
-function openEditEmp(e){$('#sheet-emp-title').textContent='Edit Employee';$('#emp-edit-id').value=e.id;$('#emp-name').value=e.name;$('#emp-role').value=e.role||'';$('#emp-access-role').value=e.accessRole||'';$('#emp-phone').value=e.phone||'';$('#emp-joining').value=e.joiningDate||'';$('#emp-govtid').value=e.govtId||'';$('#emp-wage').value=e.wage||'';if(e.joiningDate||e.govtId||e.wage){$('#emp-optional-fields').style.display='';$('#toggle-emp-optional').textContent='- Hide details'}openSheet('sheet-employee')}
+function openAddEmp(){$('#sheet-emp-title').textContent='Add Employee';$('#emp-edit-id').value='';$('#emp-name').value='';$('#emp-role').value='';$('#emp-phone').value='';$('#emp-joining').value='';$('#emp-govtid').value='';$('#emp-wage').value='';$('#emp-optional-fields').style.display='none';$('#toggle-emp-optional').textContent='+ More details (optional)';openSheet('sheet-employee');setTimeout(()=>$('#emp-name').focus(),300)}
+function openEditEmp(e){$('#sheet-emp-title').textContent='Edit Employee';$('#emp-edit-id').value=e.id;$('#emp-name').value=e.name;$('#emp-role').value=e.role||'';$('#emp-phone').value=e.phone||'';$('#emp-joining').value=e.joiningDate||'';$('#emp-govtid').value=e.govtId||'';$('#emp-wage').value=e.wage||'';if(e.joiningDate||e.govtId||e.wage){$('#emp-optional-fields').style.display='';$('#toggle-emp-optional').textContent='- Hide details'}openSheet('sheet-employee')}
 $('#btn-add-first-emp').addEventListener('click',openAddEmp);$('#btn-add-emp').addEventListener('click',openAddEmp);$('#btn-cancel-emp').addEventListener('click',()=>closeSheet('sheet-employee'));
 $('#toggle-emp-optional').addEventListener('click',()=>{const f=$('#emp-optional-fields'),b=$('#toggle-emp-optional');if(f.style.display==='none'){f.style.display='';b.textContent='- Hide details'}else{f.style.display='none';b.textContent='+ More details (optional)'}});
-$('#form-employee').addEventListener('submit',e=>{e.preventDefault();const eid=$('#emp-edit-id').value,d={name:$('#emp-name').value.trim(),role:$('#emp-role').value.trim(),accessRole:$('#emp-access-role').value||null,phone:$('#emp-phone').value.trim(),joiningDate:$('#emp-joining').value,govtId:$('#emp-govtid').value.trim(),wage:$('#emp-wage').value};if(!d.name)return;if(eid){const emp=state.employees.find(x=>x.id===eid);if(emp)Object.assign(emp,d);toast('Employee updated')}else{state.employees.push(ensureEmpDefaults({id:id(),...d}));toast('Employee added!')}save();closeSheet('sheet-employee');renderEmployees();renderAttendance();updateDropdowns();updateSummary()});
+$('#form-employee').addEventListener('submit',e=>{e.preventDefault();const eid=$('#emp-edit-id').value,d={name:$('#emp-name').value.trim(),role:$('#emp-role').value.trim(),phone:$('#emp-phone').value.trim(),joiningDate:$('#emp-joining').value,govtId:$('#emp-govtid').value.trim(),wage:$('#emp-wage').value};if(!d.name)return;if(eid){const emp=state.employees.find(x=>x.id===eid);if(emp)Object.assign(emp,d);toast('Employee updated')}else{state.employees.push(ensureEmpDefaults({id:id(),...d}));toast('Employee added!')}save();closeSheet('sheet-employee');renderEmployees();renderAttendance();updateDropdowns();updateSummary()});
 
 // ===== ATTENDANCE =====
 let attDate=today();
@@ -173,8 +192,9 @@ function renderAttendance(){
   $('#attendance-empty').style.display='none';$('#attendance-content').style.display='';
   const d=new Date(attDate+'T00:00:00'),td=today();
   if(attDate===td)$('#att-date-display').textContent='Today';
-  else{const y=new Date();y.setDate(y.getDate()-1);$('#att-date-display').textContent=attDate===y.toISOString().slice(0,10)?'Yesterday':d.toLocaleDateString('en-IN',{weekday:'short'})}
+  else{const y=new Date();y.setDate(y.getDate()-1);$('#att-date-display').textContent=attDate===localDateStr(y)?'Yesterday':d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}
   $('#att-date-sub').textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+  const isFuture=attDate>td;
   $('#att-next-day').disabled=attDate>=td;$('#att-date-picker').value=attDate;
   const active=activeEmps();
   const dd=state.attendance[attDate]||{},total=active.length,marked=active.filter(e=>dd[e.id]).length;
@@ -189,16 +209,16 @@ function renderAttendance(){
     save();renderAttendance();updateSummary();
   }));
 }
-$('#att-prev-day').addEventListener('click',()=>{const d=new Date(attDate+'T00:00:00');d.setDate(d.getDate()-1);attDate=d.toISOString().slice(0,10);renderAttendance()});
-$('#att-next-day').addEventListener('click',()=>{const d=new Date(attDate+'T00:00:00');d.setDate(d.getDate()+1);if(d.toISOString().slice(0,10)<=today()){attDate=d.toISOString().slice(0,10);renderAttendance()}});
+$('#att-prev-day').addEventListener('click',()=>{const d=new Date(attDate+'T00:00:00');d.setDate(d.getDate()-1);attDate=localDateStr(d);renderAttendance()});
+$('#att-next-day').addEventListener('click',()=>{const d=new Date(attDate+'T00:00:00');d.setDate(d.getDate()+1);const newDate=localDateStr(d);if(newDate<=today()){attDate=newDate;renderAttendance()}});
 
 // Date picker - tap on date display
-$('#att-date-tap').addEventListener('click',()=>{const dp=$('#att-date-picker');dp.style.position='fixed';dp.style.opacity='0';dp.style.pointerEvents='auto';dp.showPicker?dp.showPicker():dp.click()});
+$('#att-date-tap').addEventListener('click',()=>{const dp=$('#att-date-picker');dp.style.position='fixed';dp.style.opacity='0';dp.style.pointerEvents='auto';try{dp.showPicker()}catch(e){dp.click()}});
 $('#att-date-picker').addEventListener('change',e=>{const v=e.target.value;if(v&&v<=today()){attDate=v;renderAttendance()}e.target.style.pointerEvents='none'});
 
 function showAttHistory(emp){
   $('#att-history-title').textContent=emp.name+' - Attendance';const body=$('#att-history-body'),td=new Date(),days=[];
-  for(let i=29;i>=0;i--){const d=new Date(td);d.setDate(d.getDate()-i);const ds=d.toISOString().slice(0,10);days.push({date:d,dateStr:ds,status:(state.attendance[ds]||{})[emp.id]||null})}
+  for(let i=29;i>=0;i--){const d=new Date(td);d.setDate(d.getDate()-i);const ds=localDateStr(d);days.push({date:d,dateStr:ds,status:(state.attendance[ds]||{})[emp.id]||null})}
   let p=0,a=0,h=0;days.forEach(d=>{if(d.status==='P')p++;else if(d.status==='A')a++;else if(d.status==='H')h++});
   body.innerHTML=`<div class="att-history-stats"><div class="att-stat"><div class="att-stat-dot" style="background:var(--accent)"></div>Present: ${p}</div><div class="att-stat"><div class="att-stat-dot" style="background:var(--danger)"></div>Absent: ${a}</div><div class="att-stat"><div class="att-stat-dot" style="background:var(--warning)"></div>Half: ${h}</div></div><div style="padding:8px 0">${days.map(d=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border-light)"><span style="font-size:14px;color:var(--text-secondary);width:120px">${d.date.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}</span><span class="att-history-cell ${d.status==='P'?'present':d.status==='A'?'absent':d.status==='H'?'half':''}">${d.status==='P'?'Present':d.status==='A'?'Absent':d.status==='H'?'Half Day':'—'}</span></div>`).join('')}</div>`;
   openSheet('sheet-att-history');
@@ -236,8 +256,12 @@ $('#form-leave').addEventListener('submit',e=>{
 function showLeaveDetail(lid){
   const leave=state.leaves.find(l=>l.id===lid);if(!leave)return;
   const emp=state.employees.find(e=>e.id===leave.empId),days=daysBetween(leave.fromDate,leave.toDate).length;
+  // Check if current user is owner or has leave approval permission
+  const isOwner=!currentEmpId||(getSession()&&getSession().role==='owner');
+  const hasLeavePermission=currentEmpId&&state.permissions.leaveApproval===currentEmpId;
+  const canManageLeave=isOwner||hasLeavePermission;
   const body=$('#leave-detail-body');
-  body.innerHTML=`<h3 class="sheet-title">Leave Request</h3><div class="task-detail-info" style="border-top:none;padding-top:0"><div class="task-detail-row"><span class="task-detail-label">Employee</span><span class="task-detail-value">${emp?esc(emp.name):'Unknown'}</span></div><div class="task-detail-row"><span class="task-detail-label">Type</span><span class="task-detail-value" style="text-transform:capitalize">${leave.type} Leave</span></div><div class="task-detail-row"><span class="task-detail-label">From</span><span class="task-detail-value">${fmtDate(leave.fromDate)}</span></div><div class="task-detail-row"><span class="task-detail-label">To</span><span class="task-detail-value">${fmtDate(leave.toDate)}</span></div><div class="task-detail-row"><span class="task-detail-label">Duration</span><span class="task-detail-value">${days} day${days!==1?'s':''}</span></div>${leave.reason?`<div class="task-detail-row"><span class="task-detail-label">Reason</span><span class="task-detail-value">${esc(leave.reason)}</span></div>`:''}<div class="task-detail-row"><span class="task-detail-label">Status</span><span class="task-status-badge ${leave.status}">${leave.status}</span></div></div><div class="task-detail-actions">${leave.status==='pending'?'<button class="btn btn-accent" data-act="approve">Approve</button><button class="btn btn-danger-outline" data-act="reject">Reject</button>':''}${leave.status==='approved'?'<button class="btn btn-warning" data-act="revoke">Revoke</button>':''}${leave.status==='rejected'?'<button class="btn btn-accent" data-act="approve">Approve</button>':''}<button class="btn btn-ghost" data-act="delete">Delete</button></div>`;
+  body.innerHTML=`<h3 class="sheet-title">Leave Request</h3><div class="task-detail-info" style="border-top:none;padding-top:0"><div class="task-detail-row"><span class="task-detail-label">Employee</span><span class="task-detail-value">${emp?esc(emp.name):'Unknown'}</span></div><div class="task-detail-row"><span class="task-detail-label">Type</span><span class="task-detail-value" style="text-transform:capitalize">${leave.type} Leave</span></div><div class="task-detail-row"><span class="task-detail-label">From</span><span class="task-detail-value">${fmtDate(leave.fromDate)}</span></div><div class="task-detail-row"><span class="task-detail-label">To</span><span class="task-detail-value">${fmtDate(leave.toDate)}</span></div><div class="task-detail-row"><span class="task-detail-label">Duration</span><span class="task-detail-value">${days} day${days!==1?'s':''}</span></div>${leave.reason?`<div class="task-detail-row"><span class="task-detail-label">Reason</span><span class="task-detail-value">${esc(leave.reason)}</span></div>`:''}<div class="task-detail-row"><span class="task-detail-label">Status</span><span class="task-status-badge ${leave.status}">${leave.status}</span></div></div><div class="task-detail-actions">${canManageLeave&&leave.status==='pending'?'<button class="btn btn-accent" data-act="approve">Approve</button><button class="btn btn-danger-outline" data-act="reject">Reject</button>':''}${canManageLeave&&leave.status==='approved'?'<button class="btn btn-warning" data-act="revoke">Revoke</button>':''}${canManageLeave&&leave.status==='rejected'?'<button class="btn btn-accent" data-act="approve">Approve</button>':''}${canManageLeave?'<button class="btn btn-ghost" data-act="delete">Delete</button>':''}</div>`;
   body.querySelectorAll('[data-act]').forEach(btn=>btn.addEventListener('click',()=>{
     const a=btn.dataset.act;
     if(a==='approve'){leave.status='approved';toast('Leave approved')}
@@ -288,9 +312,15 @@ $('#btn-cancel-wage').addEventListener('click',()=>closeSheet('sheet-wage'));
 $('#form-wage').addEventListener('submit',e=>{e.preventDefault();const eid=$('#wage-emp-id').value,month=$('#wage-month').value,amount=$('#wage-amount').value,status=$('.wage-status-btn.active')?.dataset.status||'paid';if(!amount)return;const ex=state.wages.find(w=>w.empId===eid&&w.month===month);if(ex){ex.amount=amount;ex.status=status}else state.wages.push({id:id(),empId:eid,month,amount,status});save();closeSheet('sheet-wage');toast('Wage recorded')});
 
 // ===== REPORTS =====
-$$('.report-type-tab').forEach(t=>t.addEventListener('click',()=>{$$('.report-type-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');$$('.report-panel').forEach(p=>p.classList.remove('active'));$('#report-'+t.dataset.report).classList.add('active')}));
+$$('.report-type-tab').forEach(t=>t.addEventListener('click',()=>{
+  const container=t.closest('.bottom-sheet')||t.closest('.reports-container');
+  if(!container)return;
+  container.querySelectorAll('.report-type-tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+  container.querySelectorAll('.report-panel').forEach(p=>p.classList.remove('active'));
+  container.querySelector('#report-'+t.dataset.report)?.classList.add('active');
+}));
 
-function initReportDefaults(){const n=new Date(),f=new Date(n.getFullYear(),n.getMonth(),1);$('#att-report-from').value=f.toISOString().slice(0,10);$('#att-report-to').value=today();const m=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');$('#wage-report-from').value=m;$('#wage-report-to').value=m}
+function initReportDefaults(){const n=new Date(),f=new Date(n.getFullYear(),n.getMonth(),1);$('#att-report-from').value=localDateStr(f);$('#att-report-to').value=today();const m=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');$('#wage-report-from').value=m;$('#wage-report-to').value=m}
 
 $('#btn-download-att-report').addEventListener('click',()=>{
   const from=$('#att-report-from').value,to=$('#att-report-to').value,ef=$('#att-report-emp').value;
@@ -311,8 +341,8 @@ $('#btn-download-wage-report').addEventListener('click',()=>{
 });
 $('#btn-download-emp-report').addEventListener('click',()=>{
   if(!state.employees.length){toast('No employees');return}
-  let csv='Name,Role,Phone,Joining Date,Govt ID,Monthly Wage (Rs)\n';
-  state.employees.forEach(e=>csv+=`"${e.name}","${e.role||''}","${e.phone||''}","${e.joiningDate||''}","${e.govtId||''}","${e.wage||''}"\n`);
+  let csv='Name,Role,Phone,Joining Date,Govt ID,Monthly Wage (Rs),Status\n';
+  state.employees.forEach(e=>csv+=`"${e.name}","${e.role||''}","${e.phone||''}","${e.joiningDate||''}","${e.govtId||''}","${e.wage||''}","${e.status||'active'}"\n`);
   downloadCSV('employees-'+today()+'.csv',csv);toast('Report downloaded');
 });
 $('#btn-download-leave-report').addEventListener('click',()=>{
@@ -324,18 +354,64 @@ $('#btn-download-leave-report').addEventListener('click',()=>{
 });
 
 function updateSummary(){
-  $('#summary-employees').textContent=state.employees.length;
+  $('#summary-employees').textContent=activeEmps().length;
   const td=state.attendance[today()]||{};$('#summary-present').textContent=Object.values(td).filter(v=>v==='P'||v==='H').length;
   $('#summary-tasks-pending').textContent=state.tasks.filter(t=>t.status==='pending').length;
   $('#summary-tasks-overdue').textContent=state.tasks.filter(t=>isOverdue(t)).length;
 }
 
+// ===== HAMBURGER MENU =====
+function openHamburger(){
+  $('#hamburger-biz-name').textContent=state.businessName;
+  $('#hamburger-owner-name').textContent=state.ownerName;
+  $('#hamburger-menu').classList.add('open');
+}
+function closeHamburger(){$('#hamburger-menu').classList.remove('open')}
+$('#btn-hamburger').addEventListener('click',openHamburger);
+$('#hamburger-overlay').addEventListener('click',closeHamburger);
+$('#hmenu-download-reports').addEventListener('click',()=>{closeHamburger();initReportDefaults();updateDropdowns();openSheet('sheet-download-reports')});
+$('#hmenu-permissions').addEventListener('click',()=>{closeHamburger();openPermissionsSheet()});
+$('#hmenu-settings').addEventListener('click',()=>{closeHamburger();openSettings()});
+$('#hmenu-export').addEventListener('click',()=>{closeHamburger();const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='kaamkar-backup-'+today()+'.json';a.click();URL.revokeObjectURL(u);toast('Data exported')});
+$('#hmenu-logout').addEventListener('click',()=>{closeHamburger();clearSession();showScreen('screen-role-select');toast('Logged out')});
+
+// Dashboard quick links
+$('#btn-quick-download-reports').addEventListener('click',()=>{initReportDefaults();updateDropdowns();openSheet('sheet-download-reports')});
+$('#btn-quick-permissions').addEventListener('click',()=>openPermissionsSheet());
+
 // ===== SETTINGS =====
-$('#btn-settings').addEventListener('click',()=>{$('#settings-business').value=state.businessName;$('#settings-owner').value=state.ownerName;$('#settings-biz-type').value=state.businessType||'';$('#settings-phone').value=state.phone;$('#settings-email').value=state.email||'';$('#settings-address').value=state.address||'';$('#settings-city').value=state.city||'';$('#settings-state').value=state.bizState||'';$('#settings-pincode').value=state.pincode||'';$('#settings-gst').value=state.gst||'';openSheet('sheet-settings')});
+function openSettings(){
+  $('#settings-business').value=state.businessName;$('#settings-owner').value=state.ownerName;$('#settings-biz-type').value=state.businessType||'';$('#settings-phone').value=state.phone;$('#settings-email').value=state.email||'';$('#settings-address').value=state.address||'';$('#settings-city').value=state.city||'';$('#settings-state').value=state.bizState||'';$('#settings-pincode').value=state.pincode||'';$('#settings-gst').value=state.gst||'';
+  openSheet('sheet-settings');
+}
 $('#btn-save-settings').addEventListener('click',()=>{state.businessName=$('#settings-business').value.trim()||state.businessName;state.ownerName=$('#settings-owner').value.trim()||state.ownerName;state.businessType=$('#settings-biz-type').value;state.phone=$('#settings-phone').value.trim();state.email=$('#settings-email').value.trim();state.address=$('#settings-address').value.trim();state.city=$('#settings-city').value.trim();state.bizState=$('#settings-state').value.trim();state.pincode=$('#settings-pincode').value.trim();state.gst=$('#settings-gst').value.trim();save();$('#header-business-name').textContent=state.businessName;closeSheet('sheet-settings');toast('Profile saved')});
-$('#btn-export-data').addEventListener('click',()=>{const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='kaamkar-backup-'+today()+'.json';a.click();URL.revokeObjectURL(u);toast('Data exported')});
-$('#btn-clear-data').addEventListener('click',()=>{if(confirm('This will delete ALL data including employees, attendance, tasks and wages. Export a backup first if needed. Continue?')){localStorage.removeItem(DB);state=defaults();closeSheet('sheet-settings');showScreen('screen-role-select');toast('All data cleared')}});
-$('#btn-logout').addEventListener('click',()=>{closeSheet('sheet-settings');showScreen('screen-role-select');toast('Logged out')});
+$('#btn-clear-data').addEventListener('click',()=>{if(confirm('This will delete ALL data including employees, attendance, tasks and wages. Export a backup first if needed. Continue?')){localStorage.removeItem(DB);clearSession();state=defaults();closeSheet('sheet-settings');showScreen('screen-role-select');toast('All data cleared')}});
+
+// ===== PERMISSIONS =====
+function openPermissionsSheet(){
+  const active=activeEmps();
+  const permDefs=[
+    {key:'leaveApproval',label:'Leave Approval',desc:'Can approve or reject employee leave requests.',enables:'Approve/reject leaves, revoke approved leaves, delete leave requests'},
+    {key:'salaryPayout',label:'Salary Payout',desc:'Can manage monthly salary payouts for all employees.',enables:'View & confirm monthly salary payout, mark salaries as paid'},
+    {key:'reports',label:'Download Reports',desc:'Can access and download business reports.',enables:'Download attendance, wage, employee, and leave reports as CSV'}
+  ];
+  const list=$('#permissions-list');
+  list.innerHTML=permDefs.map(p=>{
+    const current=state.permissions[p.key];
+    return`<div class="perm-card"><div class="perm-card-header"><div class="perm-card-title">${p.label}</div></div><div class="perm-card-desc">${p.desc}</div><select data-perm="${p.key}"><option value="">Owner only</option>${active.map(e=>`<option value="${e.id}"${current===e.id?' selected':''}>${esc(e.name)}${e.role?' — '+esc(e.role):''}</option>`).join('')}</select><div class="perm-enables"><strong>This enables:</strong> ${p.enables}</div></div>`
+  }).join('');
+  list.querySelectorAll('select[data-perm]').forEach(sel=>sel.addEventListener('change',()=>{
+    state.permissions[sel.dataset.perm]=sel.value||null;
+    // Update accessRole on employees for backward compatibility
+    state.employees.forEach(e=>{
+      e.accessRole=null;
+      if(state.permissions.leaveApproval===e.id)e.accessRole='hr';
+      if(state.permissions.salaryPayout===e.id||state.permissions.reports===e.id)e.accessRole='accountant';
+    });
+    save();toast('Permission updated');
+  }));
+  openSheet('sheet-permissions');
+}
 
 // ===== EMPLOYEE APP =====
 let currentEmpId=null;
@@ -343,7 +419,14 @@ let currentEmpId=null;
 function initEmployeeApp(emp){
   currentEmpId=emp.id;
   $('#emp-header-name').textContent=emp.name;
-  renderEmpTasks();renderEmpAttendance();renderEmpLeaves();
+  // Show/hide HR & accountant tabs based on permissions
+  const isHR=state.permissions.leaveApproval===emp.id;
+  const isAccountant=state.permissions.salaryPayout===emp.id||state.permissions.reports===emp.id;
+  const hrNav=$('#emp-nav-hr');if(hrNav)hrNav.style.display=isHR?'':'none';
+  const accNav=$('#emp-nav-accountant');if(accNav)accNav.style.display=isAccountant?'':'none';
+  renderEmpTasks();renderEmpAttendance();renderEmpLeaves();renderEmpPayouts();
+  if(isHR)renderHrAttendance();
+  if(isAccountant)renderAccountantWages();
 }
 
 // Emp tab nav
@@ -371,7 +454,7 @@ function renderEmpTasks(){
 function renderEmpAttendance(){
   const body=$('#emp-att-summary'),hist=$('#emp-att-history');
   const td=new Date(),days=[];
-  for(let i=29;i>=0;i--){const d=new Date(td);d.setDate(d.getDate()-i);days.push({date:d,ds:d.toISOString().slice(0,10)})}
+  for(let i=0;i<30;i++){const d=new Date(td);d.setDate(d.getDate()-i);days.push({date:d,ds:localDateStr(d)})}
   let p=0,a=0,h=0;
   days.forEach(d=>{const s=(state.attendance[d.ds]||{})[currentEmpId];if(s==='P')p++;else if(s==='A')a++;else if(s==='H')h++});
   body.innerHTML=`<div class="emp-att-stat"><span class="stat-num stat-present">${p}</span><span class="stat-label">Present</span></div><div class="emp-att-stat"><span class="stat-num stat-absent">${a}</span><span class="stat-label">Absent</span></div><div class="emp-att-stat"><span class="stat-num stat-half">${h}</span><span class="stat-label">Half Day</span></div>`;
@@ -383,7 +466,31 @@ function renderEmpLeaves(){
   if(!leaves.length){$('#emp-leaves-empty').style.display='';$('#emp-leaves-list').innerHTML='';return}
   $('#emp-leaves-empty').style.display='none';
   $('#emp-leaves-list').innerHTML=leaves.map(l=>`<div class="leave-card ${l.status}" data-id="${l.id}"><div class="leave-card-header"><div><span class="leave-type-badge">${l.type} leave</span></div><span class="task-status-badge ${l.status}">${l.status}</span></div><div class="leave-card-meta"><span>${fmtDate(l.fromDate)} — ${fmtDate(l.toDate)}</span>${l.reason?`<span>${esc(l.reason)}</span>`:''}</div></div>`).join('');
-  $('#emp-leaves-list').querySelectorAll('.leave-card').forEach(c=>c.addEventListener('click',()=>showLeaveDetail(c.dataset.id)));
+  // Employees can only VIEW their leaves, no approve/reject
+  $('#emp-leaves-list').querySelectorAll('.leave-card').forEach(c=>c.addEventListener('click',()=>{
+    const hasLeavePermission=state.permissions.leaveApproval===currentEmpId;
+    if(hasLeavePermission){
+      showLeaveDetail(c.dataset.id);
+    } else {
+      // Show read-only view
+      showLeaveDetailReadOnly(c.dataset.id);
+    }
+  }));
+}
+
+function showLeaveDetailReadOnly(lid){
+  const leave=state.leaves.find(l=>l.id===lid);if(!leave)return;
+  const emp=state.employees.find(e=>e.id===leave.empId),days=daysBetween(leave.fromDate,leave.toDate).length;
+  const body=$('#leave-detail-body');
+  body.innerHTML=`<h3 class="sheet-title">Leave Request</h3><div class="task-detail-info" style="border-top:none;padding-top:0"><div class="task-detail-row"><span class="task-detail-label">Type</span><span class="task-detail-value" style="text-transform:capitalize">${leave.type} Leave</span></div><div class="task-detail-row"><span class="task-detail-label">From</span><span class="task-detail-value">${fmtDate(leave.fromDate)}</span></div><div class="task-detail-row"><span class="task-detail-label">To</span><span class="task-detail-value">${fmtDate(leave.toDate)}</span></div><div class="task-detail-row"><span class="task-detail-label">Duration</span><span class="task-detail-value">${days} day${days!==1?'s':''}</span></div>${leave.reason?`<div class="task-detail-row"><span class="task-detail-label">Reason</span><span class="task-detail-value">${esc(leave.reason)}</span></div>`:''}<div class="task-detail-row"><span class="task-detail-label">Status</span><span class="task-status-badge ${leave.status}">${leave.status}</span></div></div>`;
+  openSheet('sheet-leave-detail');
+}
+
+function renderEmpPayouts(){
+  const wages=state.wages.filter(w=>w.empId===currentEmpId).sort((a,b)=>b.month.localeCompare(a.month));
+  if(!wages.length){$('#emp-payouts-empty').style.display='';$('#emp-payouts-list').innerHTML='';return}
+  $('#emp-payouts-empty').style.display='none';
+  $('#emp-payouts-list').innerHTML=wages.map(w=>`<div class="emp-payout-card"><div><div class="emp-payout-month">${w.month}</div></div><div style="text-align:right"><div class="emp-payout-amount">Rs. ${Number(w.amount).toLocaleString('en-IN')}</div><span class="task-status-badge ${w.status==='paid'?'done':'overdue'}" style="margin-top:4px">${w.status}</span></div></div>`).join('');
 }
 
 $('#btn-emp-request-leave').addEventListener('click',()=>openLeaveSheet(currentEmpId,true));
@@ -391,9 +498,14 @@ $('#btn-emp-request-leave').addEventListener('click',()=>openLeaveSheet(currentE
 // Employee profile
 $('#btn-emp-profile').addEventListener('click',()=>{
   const emp=state.employees.find(e=>e.id===currentEmpId);if(!emp)return;
+  // Derive permissions for display
+  const permLabels=[];
+  if(state.permissions.leaveApproval===emp.id)permLabels.push('Leave Approval');
+  if(state.permissions.salaryPayout===emp.id)permLabels.push('Salary Payout');
+  if(state.permissions.reports===emp.id)permLabels.push('Reports');
   const body=$('#emp-profile-body');
-  body.innerHTML=`<div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div></div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div><div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div></div><div style="padding-top:16px"><button class="btn btn-danger-outline btn-full" id="btn-emp-logout"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div>`;
-  body.querySelector('#btn-emp-logout').addEventListener('click',()=>{currentEmpId=null;closeSheet('sheet-emp-profile');showScreen('screen-role-select');toast('Logged out')});
+  body.innerHTML=`<div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div>${permLabels.length?`<div style="margin-top:8px">${permLabels.map(l=>`<span class="access-role-badge" style="margin:2px">${l}</span>`).join('')}</div>`:''}</div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div><div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div></div><div style="padding-top:16px"><button class="btn btn-danger-outline btn-full" id="btn-emp-logout"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div>`;
+  body.querySelector('#btn-emp-logout').addEventListener('click',()=>{currentEmpId=null;clearSession();closeSheet('sheet-emp-profile');showScreen('screen-role-select');toast('Logged out')});
   openSheet('sheet-emp-profile');
 });
 
@@ -405,6 +517,8 @@ $('#btn-cancel-exit').addEventListener('click',()=>closeSheet('sheet-emp-exit'))
 $('#form-emp-exit').addEventListener('submit',e=>{
   e.preventDefault();const eid=$('#exit-emp-id').value,emp=state.employees.find(x=>x.id===eid);if(!emp)return;
   emp.status='exited';emp.exitDate=$('#exit-date').value;emp.exitReason=$('#exit-reason').value;
+  // Clean up permissions for exited employee
+  Object.keys(state.permissions).forEach(k=>{if(state.permissions[k]===eid)state.permissions[k]=null});
   save();closeSheet('sheet-emp-exit');renderEmployees();renderAttendance();updateDropdowns();updateSummary();toast(emp.name+' marked as exited');
 });
 
@@ -463,7 +577,7 @@ function renderHrAttendance(){
   const active=activeEmps();
   const d=new Date(hrAttDate+'T00:00:00'),td=today();
   if(hrAttDate===td)$('#hr-att-date-display').textContent='Today';
-  else{const y=new Date();y.setDate(y.getDate()-1);$('#hr-att-date-display').textContent=hrAttDate===y.toISOString().slice(0,10)?'Yesterday':d.toLocaleDateString('en-IN',{weekday:'short'})}
+  else{const y=new Date();y.setDate(y.getDate()-1);$('#hr-att-date-display').textContent=hrAttDate===localDateStr(y)?'Yesterday':d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'})}
   $('#hr-att-date-sub').textContent=d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
   $('#hr-att-next-day').disabled=hrAttDate>=td;$('#hr-att-date-picker').value=hrAttDate;
   const dd=state.attendance[hrAttDate]||{},total=active.length,marked=active.filter(e=>dd[e.id]).length;
@@ -478,9 +592,9 @@ function renderHrAttendance(){
     save();renderHrAttendance();
   }));
 }
-$('#hr-att-prev-day').addEventListener('click',()=>{const d=new Date(hrAttDate+'T00:00:00');d.setDate(d.getDate()-1);hrAttDate=d.toISOString().slice(0,10);renderHrAttendance()});
-$('#hr-att-next-day').addEventListener('click',()=>{const d=new Date(hrAttDate+'T00:00:00');d.setDate(d.getDate()+1);if(d.toISOString().slice(0,10)<=today()){hrAttDate=d.toISOString().slice(0,10);renderHrAttendance()}});
-$('#hr-att-date-tap').addEventListener('click',()=>{const dp=$('#hr-att-date-picker');dp.style.position='fixed';dp.style.opacity='0';dp.style.pointerEvents='auto';dp.showPicker?dp.showPicker():dp.click()});
+$('#hr-att-prev-day').addEventListener('click',()=>{const d=new Date(hrAttDate+'T00:00:00');d.setDate(d.getDate()-1);hrAttDate=localDateStr(d);renderHrAttendance()});
+$('#hr-att-next-day').addEventListener('click',()=>{const d=new Date(hrAttDate+'T00:00:00');d.setDate(d.getDate()+1);const newDate=localDateStr(d);if(newDate<=today()){hrAttDate=newDate;renderHrAttendance()}});
+$('#hr-att-date-tap').addEventListener('click',()=>{const dp=$('#hr-att-date-picker');dp.style.position='fixed';dp.style.opacity='0';dp.style.pointerEvents='auto';try{dp.showPicker()}catch(e){dp.click()}});
 $('#hr-att-date-picker').addEventListener('change',e=>{const v=e.target.value;if(v&&v<=today()){hrAttDate=v;renderHrAttendance()}e.target.style.pointerEvents='none'});
 
 // ===== ACCOUNTANT WAGES VIEW =====
