@@ -3,7 +3,7 @@
 const DB='workmitra_data';
 const SESSION='workmitra_session';
 let state=load();
-function defaults(){return{onboarded:false,phone:'',businessName:'',ownerName:'',businessType:'',email:'',address:'',city:'',bizState:'',pincode:'',gst:'',employees:[],attendance:{},tasks:[],wages:[],leaves:[],permissions:{leaveApproval:[],salaryPayout:[],reports:[]}}}
+function defaults(){return{onboarded:false,phone:'',businessName:'',ownerName:'',businessType:'',email:'',address:'',city:'',bizState:'',pincode:'',gst:'',employees:[],attendance:{},tasks:[],wages:[],leaves:[],permissions:{leaveApproval:['owner'],salaryPayout:['owner'],reports:['owner']}}}
 function ensureEmpDefaults(e){if(!e.status)e.status='active';if(!e.accessRole)e.accessRole=null;return e}
 function load(){try{const r=localStorage.getItem(DB);if(r){const d={...defaults(),...JSON.parse(r)};d.employees=(d.employees||[]).map(ensureEmpDefaults);if(!d.permissions)d.permissions={leaveApproval:[],salaryPayout:[],reports:[]};
       // Migrate old single-ID permissions to arrays
@@ -375,15 +375,7 @@ $('#dash-card-pending').addEventListener('click',()=>{taskFilter='pending';$$('[
 $('#dash-card-overdue').addEventListener('click',()=>{taskFilter='overdue';$$('[data-filter]').forEach(x=>x.classList.remove('active'));$$('[data-filter="overdue"]').forEach(x=>x.classList.add('active'));renderTasks();$$('.nav-item[data-tab]')[2].click()});
 
 function renderDashboard(){
-  const ae=activeEmps(),td=state.attendance[today()]||{};
-  // Attendance breakdown
-  let pCount=0,aCount=0,hCount=0,unmarked=0;
-  ae.forEach(e=>{const s=td[e.id];if(s==='P')pCount++;else if(s==='A')aCount++;else if(s==='H')hCount++;else unmarked++});
-  const total=ae.length||1;
-  const attEl=$('#dash-att-breakdown');
-  if(!ae.length){attEl.innerHTML='<p class="dash-empty">Add employees to see attendance</p>'}
-  else{attEl.innerHTML=`<div class="dash-att-bar">${pCount?`<div style="width:${pCount/total*100}%;background:#059669">${pCount}</div>`:''}${hCount?`<div style="width:${hCount/total*100}%;background:#d97706">${hCount}</div>`:''}${aCount?`<div style="width:${aCount/total*100}%;background:#dc2626">${aCount}</div>`:''}${unmarked?`<div style="width:${unmarked/total*100}%;background:var(--border)">${unmarked}</div>`:''}</div><div class="dash-att-legend"><span><i style="background:#059669"></i>Present ${pCount}</span><span><i style="background:#d97706"></i>Half ${hCount}</span><span><i style="background:#dc2626"></i>Absent ${aCount}</span><span><i style="background:var(--border)"></i>Unmarked ${unmarked}</span></div>`}
-
+  const ae=activeEmps();
   // Upcoming tasks (pending/overdue, sorted by due date, max 5)
   const upcoming=[...state.tasks].filter(t=>t.status==='pending').map(t=>({...t,isOD:isOverdue(t)})).sort((a,b)=>(a.dueDate||'9999').localeCompare(b.dueDate||'9999')).slice(0,5);
   const tasksEl=$('#dash-upcoming-tasks');
@@ -436,19 +428,22 @@ $('#btn-clear-data').addEventListener('click',()=>{if(confirm('This will delete 
 function openPermissionsSheet(){
   const active=activeEmps();
   const permDefs=[
-    {key:'leaveApproval',label:'Leave Approval',desc:'Can approve or reject employee leave requests.',enables:'Approve/reject leaves, revoke approved leaves, delete leave requests'},
+    {key:'leaveApproval',label:'Leave Approval & Attendance',desc:'Can mark attendance for all employees and approve/reject leave requests.',enables:'Mark daily attendance, approve/reject leaves, revoke approved leaves, delete leave requests'},
     {key:'salaryPayout',label:'Salary Payout',desc:'Can manage monthly salary payouts for all employees.',enables:'View & confirm monthly salary payout, mark salaries as paid'},
     {key:'reports',label:'Download Reports',desc:'Can access and download business reports.',enables:'Download attendance, wage, employee, and leave reports as CSV'}
   ];
   const list=$('#permissions-list');
   list.innerHTML=permDefs.map(p=>{
     const current=state.permissions[p.key]||[];
-    return`<div class="perm-card"><div class="perm-card-header"><div class="perm-card-title">${p.label}</div></div><div class="perm-card-desc">${p.desc}</div><div class="perm-enables"><strong>This enables:</strong> ${p.enables}</div><div class="perm-checkboxes" data-perm="${p.key}"><label class="perm-check-item"><input type="checkbox" value="owner" ${current.includes('owner')?'checked':''}><span class="perm-check-name">${esc(state.ownerName)} <span class="access-role-badge" style="font-size:10px">Owner</span></span></label>${active.map(e=>`<label class="perm-check-item"><input type="checkbox" value="${e.id}" ${current.includes(e.id)?'checked':''}><span class="perm-check-name">${esc(e.name)}${e.role?' — '+esc(e.role):''}</span></label>`).join('')}</div></div>`
+    // Ensure owner is always in the permission array
+    if(!current.includes('owner'))current.push('owner');
+    return`<div class="perm-card"><div class="perm-card-header"><div class="perm-card-title">${p.label}</div></div><div class="perm-card-desc">${p.desc}</div><div class="perm-enables"><strong>This enables:</strong> ${p.enables}</div><div class="perm-checkboxes" data-perm="${p.key}"><label class="perm-check-item" style="opacity:0.6"><input type="checkbox" value="owner" checked disabled><span class="perm-check-name">${esc(state.ownerName)} <span class="access-role-badge" style="font-size:10px">Owner</span></span></label>${active.map(e=>`<label class="perm-check-item"><input type="checkbox" value="${e.id}" ${current.includes(e.id)?'checked':''}><span class="perm-check-name">${esc(e.name)}${e.role?' — '+esc(e.role):''}</span></label>`).join('')}</div></div>`
   }).join('');
   list.querySelectorAll('.perm-checkboxes').forEach(wrap=>{
     wrap.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',()=>{
       const key=wrap.dataset.perm;
-      const checked=Array.from(wrap.querySelectorAll('input:checked')).map(c=>c.value);
+      const checked=Array.from(wrap.querySelectorAll('input:checked:not(:disabled)')).map(c=>c.value);
+      if(!checked.includes('owner'))checked.unshift('owner');
       state.permissions[key]=checked;
       save();toast('Permission updated');
     }));
@@ -462,11 +457,16 @@ let currentEmpId=null;
 function initEmployeeApp(emp){
   currentEmpId=emp.id;
   $('#emp-header-name').textContent=emp.name;
-  // Show/hide HR & accountant tabs based on permissions
+  // Set up employee hamburger menu visibility based on permissions
   const isHR=hasPerm('leaveApproval',emp.id);
   const isAccountant=hasPerm('salaryPayout',emp.id)||hasPerm('reports',emp.id);
-  const hrNav=$('#emp-nav-hr');if(hrNav)hrNav.style.display=isHR?'':'none';
-  const accNav=$('#emp-nav-accountant');if(accNav)accNav.style.display=isAccountant?'':'none';
+  const hasAnyPerm=isHR||isAccountant;
+  $('#ehmenu-mark-attendance').style.display=isHR?'':'none';
+  $('#ehmenu-approve-leaves').style.display=isHR?'':'none';
+  $('#ehmenu-wage-records').style.display=isAccountant?'':'none';
+  $('#ehmenu-perm-divider').style.display=hasAnyPerm?'':'none';
+  $('#emp-hamburger-name').textContent=emp.name;
+  $('#emp-hamburger-role').textContent=emp.role||'Employee';
   renderEmpTasks();renderEmpAttendance();renderEmpLeaves();renderEmpPayouts();
   if(isHR)renderHrAttendance();
   if(isAccountant)renderAccountantWages();
@@ -548,19 +548,26 @@ function renderEmpPayouts(){
 
 $('#btn-emp-request-leave').addEventListener('click',()=>openLeaveSheet(currentEmpId,true));
 
-// Employee profile
-$('#btn-emp-profile').addEventListener('click',()=>{
+// ===== EMPLOYEE HAMBURGER MENU =====
+function openEmpHamburger(){$('#emp-hamburger-menu').classList.add('open')}
+function closeEmpHamburger(){$('#emp-hamburger-menu').classList.remove('open')}
+$('#btn-emp-hamburger').addEventListener('click',openEmpHamburger);
+$('#emp-hamburger-overlay').addEventListener('click',closeEmpHamburger);
+$('#ehmenu-mark-attendance').addEventListener('click',()=>{closeEmpHamburger();$$('#screen-emp-main .tab-panel').forEach(p=>p.classList.remove('active'));$('#etab-hr-attendance').classList.add('active');$('#emp-bottom-nav').querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'))});
+$('#ehmenu-approve-leaves').addEventListener('click',()=>{closeEmpHamburger();$$('#screen-emp-main .tab-panel').forEach(p=>p.classList.remove('active'));$('#etab-leaves').classList.add('active');$('#emp-bottom-nav').querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));$('#emp-bottom-nav [data-emp-tab="etab-leaves"]').classList.add('active')});
+$('#ehmenu-wage-records').addEventListener('click',()=>{closeEmpHamburger();$$('#screen-emp-main .tab-panel').forEach(p=>p.classList.remove('active'));$('#etab-wages').classList.add('active');$('#emp-bottom-nav').querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'))});
+$('#ehmenu-profile').addEventListener('click',()=>{
+  closeEmpHamburger();
   const emp=state.employees.find(e=>e.id===currentEmpId);if(!emp)return;
-  // Derive permissions for display
   const permLabels=[];
-  if(hasPerm('leaveApproval',emp.id))permLabels.push('Leave Approval');
+  if(hasPerm('leaveApproval',emp.id))permLabels.push('Leave Approval & Attendance');
   if(hasPerm('salaryPayout',emp.id))permLabels.push('Salary Payout');
   if(hasPerm('reports',emp.id))permLabels.push('Reports');
   const body=$('#emp-profile-body');
-  body.innerHTML=`<div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div>${permLabels.length?`<div style="margin-top:8px">${permLabels.map(l=>`<span class="access-role-badge" style="margin:2px">${l}</span>`).join('')}</div>`:''}</div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div><div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div></div><div style="padding-top:16px"><button class="btn btn-danger-outline btn-full" id="btn-emp-logout"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout</button></div>`;
-  body.querySelector('#btn-emp-logout').addEventListener('click',()=>{currentEmpId=null;clearSession();closeSheet('sheet-emp-profile');showScreen('screen-role-select');toast('Logged out')});
+  body.innerHTML=`<div class="emp-detail-header"><div class="emp-detail-avatar ${avatarCls(emp.id)}">${ini(emp.name)}</div><div class="emp-detail-name">${esc(emp.name)}</div><div class="emp-detail-role">${esc(emp.role||'No role')}</div>${permLabels.length?`<div style="margin-top:8px">${permLabels.map(l=>`<span class="access-role-badge" style="margin:2px">${l}</span>`).join('')}</div>`:''}</div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div><div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div></div>`;
   openSheet('sheet-emp-profile');
 });
+$('#ehmenu-logout').addEventListener('click',()=>{closeEmpHamburger();currentEmpId=null;clearSession();showScreen('screen-role-select');toast('Logged out')});
 
 // ===== EMPLOYEE EXIT =====
 function openExitSheet(emp){
