@@ -147,7 +147,6 @@ function showEmpDetail(eid){
     <div class="detail-grid">
       <div class="detail-item"><div class="detail-item-label">Phone</div><div class="detail-item-value">${emp.phone?'+91 '+emp.phone:'—'}</div></div>
       <div class="detail-item"><div class="detail-item-label">Joining Date</div><div class="detail-item-value">${emp.joiningDate?fmtDate(emp.joiningDate):'—'}</div></div>
-      <div class="detail-item"><div class="detail-item-label">Govt ID</div><div class="detail-item-value">${emp.govtId?esc(emp.govtId):'—'}</div></div>
       <div class="detail-item"><div class="detail-item-label">Monthly Wage</div><div class="detail-item-value">${emp.wage?'₹'+Number(emp.wage).toLocaleString('en-IN'):'—'}</div></div>
       ${isExited?`<div class="detail-item"><div class="detail-item-label">Exit Date</div><div class="detail-item-value">${emp.exitDate?fmtDate(emp.exitDate):'—'}</div></div><div class="detail-item"><div class="detail-item-label">Exit Reason</div><div class="detail-item-value">${emp.exitReason?esc(emp.exitReason):'—'}</div></div>`:''}
     </div>
@@ -201,14 +200,14 @@ function setDocUploadFromEmp(emp){
   });
 }
 function openAddEmp(){
-  $('#sheet-emp-title').textContent='Add Employee';$('#emp-edit-id').value='';$('#emp-name').value='';$('#emp-role').value='';$('#emp-phone').value='';$('#emp-joining').value='';$('#emp-govtid').value='';$('#emp-wage').value='';
+  $('#sheet-emp-title').textContent='Add Employee';$('#emp-edit-id').value='';$('#emp-name').value='';$('#emp-role').value='';$('#emp-phone').value='';$('#emp-joining').value='';$('#emp-wage').value='';
   resetDocUploadUI();
   $('#emp-optional-fields').style.display='none';$('#toggle-emp-optional').textContent='+ More details (optional)';openSheet('sheet-employee');setTimeout(()=>$('#emp-name').focus(),300)
 }
 function openEditEmp(e){
-  $('#sheet-emp-title').textContent='Edit Employee';$('#emp-edit-id').value=e.id;$('#emp-name').value=e.name;$('#emp-role').value=e.role||'';$('#emp-phone').value=e.phone||'';$('#emp-joining').value=e.joiningDate||'';$('#emp-govtid').value=e.govtId||'';$('#emp-wage').value=e.wage||'';
+  $('#sheet-emp-title').textContent='Edit Employee';$('#emp-edit-id').value=e.id;$('#emp-name').value=e.name;$('#emp-role').value=e.role||'';$('#emp-phone').value=e.phone||'';$('#emp-joining').value=e.joiningDate||'';$('#emp-wage').value=e.wage||'';
   resetDocUploadUI();setDocUploadFromEmp(e);
-  if(e.joiningDate||e.govtId||e.wage||e.doc_aadhaar||e.doc_pan){$('#emp-optional-fields').style.display='';$('#toggle-emp-optional').textContent='- Hide details'}
+  if(e.joiningDate||e.wage||e.doc_aadhaar||e.doc_pan){$('#emp-optional-fields').style.display='';$('#toggle-emp-optional').textContent='- Hide details'}
   openSheet('sheet-employee')
 }
 
@@ -234,7 +233,7 @@ $('#toggle-emp-optional').addEventListener('click',()=>{const f=$('#emp-optional
 $('#form-employee').addEventListener('submit',e=>{
   e.preventDefault();
   const eid=$('#emp-edit-id').value;
-  const d={name:$('#emp-name').value.trim(),role:$('#emp-role').value.trim(),phone:$('#emp-phone').value.trim(),joiningDate:$('#emp-joining').value,govtId:$('#emp-govtid').value.trim(),wage:$('#emp-wage').value};
+  const d={name:$('#emp-name').value.trim(),role:$('#emp-role').value.trim(),phone:$('#emp-phone').value.trim(),joiningDate:$('#emp-joining').value,wage:$('#emp-wage').value};
   if(!d.name)return;
   // Attach uploaded docs if new ones were selected
   if($('#emp-aadhaar').dataset.dataUrl)d.doc_aadhaar=$('#emp-aadhaar').dataset.dataUrl;
@@ -302,6 +301,8 @@ function openLeaveSheet(empId,isEmployee){
   if(empId){$('#leave-emp-select-wrap').style.display='none'}else{$('#leave-emp-select-wrap').style.display='';updateDropdowns()}
   $('#leave-type').value='casual';$('#leave-from').value=today();$('#leave-to').value=today();$('#leave-reason').value='';openSheet('sheet-leave');
 }
+$('#btn-add-leave').addEventListener('click',()=>{updateDropdowns();openLeaveSheet(null,false)});
+$('#btn-add-leave-empty').addEventListener('click',()=>{updateDropdowns();openLeaveSheet(null,false)});
 $('#btn-cancel-leave').addEventListener('click',()=>closeSheet('sheet-leave'));
 $('#form-leave').addEventListener('submit',e=>{
   e.preventDefault();const empId=$('#leave-emp-id-hidden').value||$('#leave-employee').value;
@@ -424,11 +425,19 @@ function updateSummary(){
   renderDashboard();
 }
 
+// Helper: switch to a named tab (handles tabs not in nav, e.g. employees)
+function switchTab(tabId){
+  $$('#screen-main .tab-panel').forEach(p=>p.classList.remove('active'));
+  const panel=$('#tab-'+tabId);if(panel)panel.classList.add('active');
+  $$('.nav-item[data-tab]').forEach(x=>x.classList.remove('active'));
+  const navItem=document.querySelector(`.nav-item[data-tab="${tabId}"]`);
+  if(navItem)navItem.classList.add('active');
+}
 // Dashboard card clicks
-$('#dash-card-employees').addEventListener('click',()=>{$$('.nav-item[data-tab]')[0].click()});
-$('#dash-card-present').addEventListener('click',()=>{$$('.nav-item[data-tab]')[1].click()});
-$('#dash-card-pending').addEventListener('click',()=>{taskFilter='pending';$$('[data-filter]').forEach(x=>x.classList.remove('active'));$$('[data-filter="pending"]').forEach(x=>x.classList.add('active'));renderTasks();$$('.nav-item[data-tab]')[2].click()});
-$('#dash-card-overdue').addEventListener('click',()=>{taskFilter='overdue';$$('[data-filter]').forEach(x=>x.classList.remove('active'));$$('[data-filter="overdue"]').forEach(x=>x.classList.add('active'));renderTasks();$$('.nav-item[data-tab]')[2].click()});
+$('#dash-card-employees').addEventListener('click',()=>switchTab('employees'));
+$('#dash-card-present').addEventListener('click',()=>switchTab('attendance'));
+$('#dash-card-pending').addEventListener('click',()=>{taskFilter='pending';$$('[data-filter]').forEach(x=>x.classList.remove('active'));$$('[data-filter="pending"]').forEach(x=>x.classList.add('active'));renderTasks();switchTab('tasks')});
+$('#dash-card-overdue').addEventListener('click',()=>{taskFilter='overdue';$$('[data-filter]').forEach(x=>x.classList.remove('active'));$$('[data-filter="overdue"]').forEach(x=>x.classList.add('active'));renderTasks();switchTab('tasks')});
 
 function renderDashboard(){
   const ae=activeEmps();
@@ -465,6 +474,7 @@ function openHamburger(){
 function closeHamburger(){$('#hamburger-menu').classList.remove('open')}
 $('#btn-hamburger').addEventListener('click',openHamburger);
 $('#hamburger-overlay').addEventListener('click',closeHamburger);
+$('#hmenu-employees').addEventListener('click',()=>{closeHamburger();switchTab('employees')});
 $('#hmenu-download-reports').addEventListener('click',()=>{closeHamburger();initReportDefaults();updateDropdowns();openSheet('sheet-download-reports')});
 $('#hmenu-offer-letter').addEventListener('click',()=>{closeHamburger();openOfferLetterGen()});
 $('#hmenu-permissions').addEventListener('click',()=>{closeHamburger();openPermissionsSheet()});
@@ -541,7 +551,6 @@ $('#btn-offergen-preview').addEventListener('click',()=>{
       ${f.location?`<tr><td>Work Location</td><td>${esc(f.location)}</td></tr>`:''}
     </table>
     ${f.terms?`<div class="offer-para"><strong>Terms & Conditions:</strong><br>${esc(f.terms)}</div>`:''}
-    <div class="offer-para">Please confirm your acceptance by replying to this message or contacting us directly.</div>
     <div class="offer-sign">
       Regards,<br>
       <strong>${esc(state.ownerName)}</strong><br>
@@ -551,17 +560,8 @@ $('#btn-offergen-preview').addEventListener('click',()=>{
 });
 $('#btn-offergen-back').addEventListener('click',()=>{$('#offer-gen-form').style.display='';$('#offer-gen-preview').style.display='none'});
 $('#btn-offergen-cancel').addEventListener('click',()=>closeSheet('sheet-offer-letter-gen'));
-$('#btn-offergen-copy').addEventListener('click',()=>{
-  const text=$('#offer-preview-content').innerText;
-  navigator.clipboard.writeText(text).then(()=>toast('Letter copied to clipboard!')).catch(()=>toast('Select and copy the text manually'));
-});
-$('#btn-offergen-whatsapp').addEventListener('click',()=>{
-  const f=buildOfferLetterText();
-  const joiningStr=f.joining?fmtDate(f.joining):'TBD';
-  const salStr=f.salary?'₹'+Number(f.salary).toLocaleString('en-IN')+'/month':'TBD';
-  const msg=`*Offer Letter — ${state.businessName}*\n\nDear ${f.name},\n\nWe are pleased to offer you the position of *${f.role}* at *${state.businessName}*.\n\n📋 *Details:*\n• Position: ${f.role}\n• Joining Date: ${joiningStr}\n• Monthly Salary: ${salStr}${f.location?'\n• Location: '+f.location:''}${f.terms?'\n\n📌 Terms: '+f.terms:''}\n\nPlease confirm your acceptance by replying to this message.\n\nRegards,\n${state.ownerName}\n${state.businessName}`;
-  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
-});
+$('#btn-offergen-pdf').addEventListener('click',()=>toast('PDF download coming soon'));
+$('#btn-offergen-share').addEventListener('click',()=>toast('Share feature coming soon'));
 
 // ===== EMPLOYEE APP =====
 let currentEmpId=null;
@@ -700,7 +700,74 @@ $('#form-emp-exit').addEventListener('submit',e=>{
 // ===== OFFER LETTER =====
 function showOfferLetter(emp){
   const body=$('#offer-letter-body');
-  body.innerHTML=`<div class="letter-preview"><h4>OFFER LETTER</h4><p>Date: ${fmtDate(today())}</p><p>Dear <span class="field">${esc(emp.name)}</span>,</p><p>We are pleased to offer you the position of <span class="field">${esc(emp.role||'Employee')}</span> at <span class="field">${esc(state.businessName)}</span>.</p><p>Your joining date is <span class="field">${emp.joiningDate?fmtDate(emp.joiningDate):'[To be decided]'}</span>.</p><p>Your monthly compensation will be <span class="field">${emp.wage?'₹'+Number(emp.wage).toLocaleString('en-IN'):'[To be decided]'}</span>.</p><p>We look forward to having you on our team.</p><p style="margin-top:16px">Regards,<br><span class="field">${esc(state.ownerName)}</span><br>${esc(state.businessName)}</p></div><button class="btn btn-primary btn-full" disabled>Generate Offer Letter (Coming Soon)</button><p class="letter-coming-soon">Auto-generated offer letters with digital signatures - coming in v2</p>`;
+  if(emp.doc_offer){
+    body.innerHTML=`
+      <div class="offer-attached-card">
+        <div class="offer-attached-icon"><svg width="28" height="28" fill="none" stroke="var(--accent)" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15l2 2 4-4"/></svg></div>
+        <div><div style="font-weight:700;font-size:16px">Offer Letter</div><div style="font-size:13px;color:var(--text-secondary);margin-top:2px">Document attached</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <a href="${emp.doc_offer}" target="_blank" class="btn btn-primary" style="flex:1;text-align:center">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> View
+        </a>
+        <label class="btn btn-ghost" style="flex:1;text-align:center;cursor:pointer">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Replace
+          <input type="file" id="offer-letter-file-input" accept="image/*,application/pdf" style="display:none">
+        </label>
+      </div>
+      <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">Need to generate a new one?</p>
+        <button class="btn btn-outline" id="btn-offer-goto-gen" style="font-size:14px">Generate Offer Letter →</button>
+      </div>`;
+  } else {
+    body.innerHTML=`
+      <p style="font-size:14px;color:var(--text-secondary);margin-bottom:16px">Attach the offer letter shared with <strong>${esc(emp.name)}</strong> before they joined.</p>
+      <label class="doc-upload-card" id="offer-upload-card" style="width:100%;max-width:none;padding:24px 16px">
+        <input type="file" id="offer-letter-file-input" accept="image/*,application/pdf" style="display:none">
+        <div class="doc-upload-icon"><svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div>
+        <div class="doc-upload-name">Upload Offer Letter</div>
+        <div class="doc-upload-status" id="offer-upload-status">Tap to select file (PDF or image)</div>
+      </label>
+      <button class="btn btn-primary btn-full" id="btn-offer-save" style="margin-top:12px" disabled>Save Offer Letter</button>
+      <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">Don't have one yet?</p>
+        <button class="btn btn-outline" id="btn-offer-goto-gen" style="font-size:14px">Generate Offer Letter →</button>
+      </div>`;
+  }
+  // File input handler
+  const fileInput=body.querySelector('#offer-letter-file-input');
+  if(fileInput){
+    fileInput.addEventListener('change',function(){
+      if(!this.files[0])return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        fileInput.dataset.dataUrl=ev.target.result;
+        const card=body.querySelector('#offer-upload-card');
+        const status=body.querySelector('#offer-upload-status');
+        const saveBtn=body.querySelector('#btn-offer-save');
+        if(card)card.classList.add('has-file');
+        if(status)status.textContent='✓ '+this.files[0].name.slice(0,24)+(this.files[0].name.length>24?'…':'');
+        if(saveBtn)saveBtn.disabled=false;
+        // Replace flow: auto-save immediately
+        if(emp.doc_offer&&fileInput.dataset.dataUrl){
+          emp.doc_offer=fileInput.dataset.dataUrl;save();closeSheet('sheet-offer-letter');showEmpDetail(emp.id);toast('Offer letter replaced');
+        }
+      };
+      reader.readAsDataURL(this.files[0]);
+    });
+  }
+  // Save button
+  const saveBtn=body.querySelector('#btn-offer-save');
+  if(saveBtn){
+    saveBtn.addEventListener('click',()=>{
+      if(fileInput&&fileInput.dataset.dataUrl){
+        emp.doc_offer=fileInput.dataset.dataUrl;save();closeSheet('sheet-offer-letter');showEmpDetail(emp.id);toast('Offer letter saved!');
+      }
+    });
+  }
+  // Go to generator
+  const genBtn=body.querySelector('#btn-offer-goto-gen');
+  if(genBtn)genBtn.addEventListener('click',()=>{closeSheet('sheet-offer-letter');openOfferLetterGen()});
   openSheet('sheet-offer-letter');
 }
 
