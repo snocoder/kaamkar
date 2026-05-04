@@ -88,7 +88,7 @@ function initOnLoad(){
 // ===== OWNER APP =====
 function initOwnerApp(){
   $('#header-business-name').textContent=state.businessName;
-  renderEmployees();renderAttendance();renderTasks();renderLeaves();updateSummary();initReportDefaults();updateDropdowns();
+  renderDashboard();renderEmployees();renderAttendance();renderTasks();renderLeaves();updateSummary();initReportDefaults();updateDropdowns();
 }
 
 // Tab nav
@@ -151,6 +151,7 @@ function showEmpDetail(eid){
       <div class="detail-item"><div class="detail-item-label">Monthly Wage</div><div class="detail-item-value">${emp.wage?'₹'+Number(emp.wage).toLocaleString('en-IN'):'—'}</div></div>
       ${isExited?`<div class="detail-item"><div class="detail-item-label">Exit Date</div><div class="detail-item-value">${emp.exitDate?fmtDate(emp.exitDate):'—'}</div></div><div class="detail-item"><div class="detail-item-label">Exit Reason</div><div class="detail-item-value">${emp.exitReason?esc(emp.exitReason):'—'}</div></div>`:''}
     </div>
+    ${(emp.doc_aadhaar||emp.doc_pan)?`<div style="padding:0 0 8px"><div class="detail-item-label" style="margin-bottom:8px">DOCUMENTS</div><div style="display:flex;gap:8px">${emp.doc_aadhaar?`<a href="${emp.doc_aadhaar}" target="_blank" class="doc-view-btn"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Aadhaar Card</a>`:''}${emp.doc_pan?`<a href="${emp.doc_pan}" target="_blank" class="doc-view-btn"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PAN Card</a>`:''}${(!emp.doc_aadhaar||!emp.doc_pan)?`<span style="font-size:12px;color:var(--text-tertiary);align-self:center">${!emp.doc_aadhaar&&!emp.doc_pan?'':'Missing: '}${!emp.doc_aadhaar?'Aadhaar':''}${!emp.doc_aadhaar&&!emp.doc_pan?' & ':''}${!emp.doc_pan?'PAN':''}</span>`:''}</div></div>`:`<div style="padding:0 0 8px"><div class="detail-item-label" style="margin-bottom:4px">DOCUMENTS</div><span style="font-size:13px;color:var(--text-tertiary)">No documents uploaded. Edit employee to add.</span></div>`}
     <div class="detail-actions">
       <button class="detail-action-btn" data-act="edit"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit Employee</button>
       <button class="detail-action-btn" data-act="att"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Attendance History</button>
@@ -182,11 +183,66 @@ function showEmpDetail(eid){
   openSheet('sheet-emp-detail');
 }
 
-function openAddEmp(){$('#sheet-emp-title').textContent='Add Employee';$('#emp-edit-id').value='';$('#emp-name').value='';$('#emp-role').value='';$('#emp-phone').value='';$('#emp-joining').value='';$('#emp-govtid').value='';$('#emp-wage').value='';$('#emp-optional-fields').style.display='none';$('#toggle-emp-optional').textContent='+ More details (optional)';openSheet('sheet-employee');setTimeout(()=>$('#emp-name').focus(),300)}
-function openEditEmp(e){$('#sheet-emp-title').textContent='Edit Employee';$('#emp-edit-id').value=e.id;$('#emp-name').value=e.name;$('#emp-role').value=e.role||'';$('#emp-phone').value=e.phone||'';$('#emp-joining').value=e.joiningDate||'';$('#emp-govtid').value=e.govtId||'';$('#emp-wage').value=e.wage||'';if(e.joiningDate||e.govtId||e.wage){$('#emp-optional-fields').style.display='';$('#toggle-emp-optional').textContent='- Hide details'}openSheet('sheet-employee')}
+function resetDocUploadUI(){
+  ['aadhaar','pan'].forEach(t=>{
+    $('#emp-'+t).value='';
+    $('#'+t+'-upload-label').classList.remove('has-file');
+    $('#'+t+'-upload-status').textContent='';
+    $('#'+t+'-upload-name').textContent=t==='aadhaar'?'Aadhaar Card':'PAN Card';
+  });
+}
+function setDocUploadFromEmp(emp){
+  ['aadhaar','pan'].forEach(t=>{
+    const val=emp['doc_'+t];
+    const label=$('#'+t+'-upload-label');
+    const status=$('#'+t+'-upload-status');
+    if(val){label.classList.add('has-file');status.textContent='✓ Uploaded';}
+    else{label.classList.remove('has-file');status.textContent='';}
+  });
+}
+function openAddEmp(){
+  $('#sheet-emp-title').textContent='Add Employee';$('#emp-edit-id').value='';$('#emp-name').value='';$('#emp-role').value='';$('#emp-phone').value='';$('#emp-joining').value='';$('#emp-govtid').value='';$('#emp-wage').value='';
+  resetDocUploadUI();
+  $('#emp-optional-fields').style.display='none';$('#toggle-emp-optional').textContent='+ More details (optional)';openSheet('sheet-employee');setTimeout(()=>$('#emp-name').focus(),300)
+}
+function openEditEmp(e){
+  $('#sheet-emp-title').textContent='Edit Employee';$('#emp-edit-id').value=e.id;$('#emp-name').value=e.name;$('#emp-role').value=e.role||'';$('#emp-phone').value=e.phone||'';$('#emp-joining').value=e.joiningDate||'';$('#emp-govtid').value=e.govtId||'';$('#emp-wage').value=e.wage||'';
+  resetDocUploadUI();setDocUploadFromEmp(e);
+  if(e.joiningDate||e.govtId||e.wage||e.doc_aadhaar||e.doc_pan){$('#emp-optional-fields').style.display='';$('#toggle-emp-optional').textContent='- Hide details'}
+  openSheet('sheet-employee')
+}
+
+// File input handlers for doc uploads
+function setupDocInput(inputId,labelId,statusId,fieldKey){
+  $(inputId).addEventListener('change',function(){
+    if(!this.files[0])return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      // Store as base64 on the pending employee object (applied on submit)
+      $(inputId).dataset.dataUrl=ev.target.result;
+      $(labelId).classList.add('has-file');
+      $(statusId).textContent='✓ '+this.files[0].name.slice(0,16)+(this.files[0].name.length>16?'…':'');
+    };
+    reader.readAsDataURL(this.files[0]);
+  });
+}
+setupDocInput('#emp-aadhaar','#aadhaar-upload-label','#aadhaar-upload-status','doc_aadhaar');
+setupDocInput('#emp-pan','#pan-upload-label','#pan-upload-status','doc_pan');
+
 $('#btn-add-first-emp').addEventListener('click',openAddEmp);$('#btn-add-emp').addEventListener('click',openAddEmp);$('#btn-cancel-emp').addEventListener('click',()=>closeSheet('sheet-employee'));
 $('#toggle-emp-optional').addEventListener('click',()=>{const f=$('#emp-optional-fields'),b=$('#toggle-emp-optional');if(f.style.display==='none'){f.style.display='';b.textContent='- Hide details'}else{f.style.display='none';b.textContent='+ More details (optional)'}});
-$('#form-employee').addEventListener('submit',e=>{e.preventDefault();const eid=$('#emp-edit-id').value,d={name:$('#emp-name').value.trim(),role:$('#emp-role').value.trim(),phone:$('#emp-phone').value.trim(),joiningDate:$('#emp-joining').value,govtId:$('#emp-govtid').value.trim(),wage:$('#emp-wage').value};if(!d.name)return;if(eid){const emp=state.employees.find(x=>x.id===eid);if(emp)Object.assign(emp,d);toast('Employee updated')}else{state.employees.push(ensureEmpDefaults({id:id(),...d}));toast('Employee added!')}save();closeSheet('sheet-employee');renderEmployees();renderAttendance();updateDropdowns();updateSummary()});
+$('#form-employee').addEventListener('submit',e=>{
+  e.preventDefault();
+  const eid=$('#emp-edit-id').value;
+  const d={name:$('#emp-name').value.trim(),role:$('#emp-role').value.trim(),phone:$('#emp-phone').value.trim(),joiningDate:$('#emp-joining').value,govtId:$('#emp-govtid').value.trim(),wage:$('#emp-wage').value};
+  if(!d.name)return;
+  // Attach uploaded docs if new ones were selected
+  if($('#emp-aadhaar').dataset.dataUrl)d.doc_aadhaar=$('#emp-aadhaar').dataset.dataUrl;
+  if($('#emp-pan').dataset.dataUrl)d.doc_pan=$('#emp-pan').dataset.dataUrl;
+  if(eid){const emp=state.employees.find(x=>x.id===eid);if(emp)Object.assign(emp,d);toast('Employee updated')}
+  else{state.employees.push(ensureEmpDefaults({id:id(),...d}));toast('Employee added!')}
+  save();closeSheet('sheet-employee');renderEmployees();renderAttendance();updateDropdowns();updateSummary();renderDashboard();
+});
 
 // ===== ATTENDANCE =====
 let attDate=today();
@@ -410,6 +466,7 @@ function closeHamburger(){$('#hamburger-menu').classList.remove('open')}
 $('#btn-hamburger').addEventListener('click',openHamburger);
 $('#hamburger-overlay').addEventListener('click',closeHamburger);
 $('#hmenu-download-reports').addEventListener('click',()=>{closeHamburger();initReportDefaults();updateDropdowns();openSheet('sheet-download-reports')});
+$('#hmenu-offer-letter').addEventListener('click',()=>{closeHamburger();openOfferLetterGen()});
 $('#hmenu-permissions').addEventListener('click',()=>{closeHamburger();openPermissionsSheet()});
 $('#hmenu-settings').addEventListener('click',()=>{closeHamburger();openSettings()});
 $('#hmenu-export').addEventListener('click',()=>{closeHamburger();const b=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download='workmitra-backup-'+today()+'.json';a.click();URL.revokeObjectURL(u);toast('Data exported')});
@@ -450,6 +507,61 @@ function openPermissionsSheet(){
   });
   openSheet('sheet-permissions');
 }
+
+// ===== OFFER LETTER GENERATOR =====
+function openOfferLetterGen(){
+  $('#offergen-name').value='';$('#offergen-role').value='';$('#offergen-joining').value='';$('#offergen-salary').value='';$('#offergen-location').value=state.city||'';$('#offergen-terms').value='';
+  $('#offer-gen-form').style.display='';$('#offer-gen-preview').style.display='none';
+  openSheet('sheet-offer-letter-gen');
+}
+function buildOfferLetterText(){
+  const name=$('#offergen-name').value.trim();
+  const role=$('#offergen-role').value.trim();
+  const joining=$('#offergen-joining').value;
+  const salary=$('#offergen-salary').value;
+  const location=$('#offergen-location').value.trim();
+  const terms=$('#offergen-terms').value.trim();
+  return{name,role,joining,salary,location,terms};
+}
+$('#btn-offergen-preview').addEventListener('click',()=>{
+  const f=buildOfferLetterText();
+  if(!f.name||!f.role){toast('Name and role are required');return}
+  const joiningStr=f.joining?fmtDate(f.joining):'[To be confirmed]';
+  const salStr=f.salary?'₹'+Number(f.salary).toLocaleString('en-IN')+' per month':'[To be discussed]';
+  const preview=$('#offer-preview-content');
+  preview.innerHTML=`
+    <h4>${esc(state.businessName)}</h4>
+    <div class="offer-date">Date: ${fmtDate(today())}</div>
+    <div class="offer-para">Dear <span class="offer-field">${esc(f.name)}</span>,</div>
+    <div class="offer-para">We are pleased to offer you the position of <span class="offer-field">${esc(f.role)}</span> at <span class="offer-field">${esc(state.businessName)}</span>.</div>
+    <table class="offer-table">
+      <tr><td>Position</td><td>${esc(f.role)}</td></tr>
+      <tr><td>Joining Date</td><td>${joiningStr}</td></tr>
+      <tr><td>Monthly Salary</td><td>${salStr}</td></tr>
+      ${f.location?`<tr><td>Work Location</td><td>${esc(f.location)}</td></tr>`:''}
+    </table>
+    ${f.terms?`<div class="offer-para"><strong>Terms & Conditions:</strong><br>${esc(f.terms)}</div>`:''}
+    <div class="offer-para">Please confirm your acceptance by replying to this message or contacting us directly.</div>
+    <div class="offer-sign">
+      Regards,<br>
+      <strong>${esc(state.ownerName)}</strong><br>
+      ${esc(state.businessName)}${f.location?'<br>'+esc(f.location):''}
+    </div>`;
+  $('#offer-gen-form').style.display='none';$('#offer-gen-preview').style.display='';
+});
+$('#btn-offergen-back').addEventListener('click',()=>{$('#offer-gen-form').style.display='';$('#offer-gen-preview').style.display='none'});
+$('#btn-offergen-cancel').addEventListener('click',()=>closeSheet('sheet-offer-letter-gen'));
+$('#btn-offergen-copy').addEventListener('click',()=>{
+  const text=$('#offer-preview-content').innerText;
+  navigator.clipboard.writeText(text).then(()=>toast('Letter copied to clipboard!')).catch(()=>toast('Select and copy the text manually'));
+});
+$('#btn-offergen-whatsapp').addEventListener('click',()=>{
+  const f=buildOfferLetterText();
+  const joiningStr=f.joining?fmtDate(f.joining):'TBD';
+  const salStr=f.salary?'₹'+Number(f.salary).toLocaleString('en-IN')+'/month':'TBD';
+  const msg=`*Offer Letter — ${state.businessName}*\n\nDear ${f.name},\n\nWe are pleased to offer you the position of *${f.role}* at *${state.businessName}*.\n\n📋 *Details:*\n• Position: ${f.role}\n• Joining Date: ${joiningStr}\n• Monthly Salary: ${salStr}${f.location?'\n• Location: '+f.location:''}${f.terms?'\n\n📌 Terms: '+f.terms:''}\n\nPlease confirm your acceptance by replying to this message.\n\nRegards,\n${state.ownerName}\n${state.businessName}`;
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+});
 
 // ===== EMPLOYEE APP =====
 let currentEmpId=null;

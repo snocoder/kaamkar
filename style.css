@@ -398,6 +398,30 @@ a{color:var(--primary);text-decoration:none}
 .perm-check-item input[type="checkbox"]{width:18px;height:18px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
 .perm-check-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+/* Document Upload */
+.doc-upload-section{margin-top:16px}
+.doc-upload-label{font-size:12px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.doc-upload-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.doc-upload-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border:2px dashed var(--border);border-radius:var(--radius);background:var(--border-light);cursor:pointer;transition:all .2s;text-align:center}
+.doc-upload-card:active{border-color:var(--primary);background:var(--primary-light)}
+.doc-upload-card.has-file{border-style:solid;border-color:var(--accent);background:var(--accent-light)}
+.doc-upload-icon{color:var(--text-tertiary)}
+.doc-upload-card.has-file .doc-upload-icon{color:var(--accent)}
+.doc-upload-name{font-size:12px;font-weight:600;color:var(--text-secondary)}
+.doc-upload-status{font-size:11px;color:var(--accent);font-weight:600;min-height:14px}
+.doc-view-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:var(--primary-light);color:var(--primary);border-radius:var(--radius-sm);font-size:12px;font-weight:600;text-decoration:none;border:1px solid var(--primary-light)}
+
+/* Offer Letter Generator */
+.offer-letter-preview{background:var(--border-light);border:1px solid var(--border);border-radius:var(--radius);padding:20px;font-size:13px;line-height:1.8;color:var(--text)}
+.offer-letter-preview h4{font-size:15px;font-weight:800;text-align:center;margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+.offer-letter-preview .offer-date{text-align:right;color:var(--text-secondary);font-size:12px;margin-bottom:12px}
+.offer-letter-preview .offer-para{margin-bottom:10px}
+.offer-letter-preview .offer-field{font-weight:700;color:var(--primary)}
+.offer-letter-preview .offer-table{width:100%;border-collapse:collapse;margin:10px 0}
+.offer-letter-preview .offer-table td{padding:6px 8px;border:1px solid var(--border);font-size:12px}
+.offer-letter-preview .offer-table td:first-child{font-weight:600;background:var(--surface);width:45%}
+.offer-letter-preview .offer-sign{margin-top:20px;padding-top:12px;border-top:1px solid var(--border)}
+
 /* Employee Payout History */
 .emp-payout-card{background:var(--surface);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-sm);border:1px solid var(--border-light);margin-bottom:8px}
 .emp-payout-month{font-size:14px;font-weight:600}
