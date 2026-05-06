@@ -128,18 +128,38 @@
         <button class="back-btn" data-back="screen-role-select">&larr;</button>
         <div class="onboard-logo small">
           <h2>Employee Login</h2>
-          <p class="subtitle">Enter your phone number to find your account</p>
+          <p class="subtitle">Enter your registered phone number</p>
         </div>
         <div class="onboard-form">
           <div class="phone-input-group">
             <span class="country-code">+91</span>
-            <input type="tel" id="emp-login-phone" maxlength="10" placeholder="Your registered phone" inputmode="numeric">
+            <input type="tel" id="emp-login-phone" maxlength="10" placeholder="Phone number" inputmode="numeric">
           </div>
-          <button class="btn btn-primary btn-full" id="btn-emp-login" disabled>Continue</button>
-          <div id="emp-login-error" class="error-msg" style="display:none">
-            No account found. Please ask your employer to add you first.
-          </div>
+          <button class="btn btn-primary btn-full" id="btn-emp-send-otp" disabled>Send OTP</button>
           <p class="emp-login-note">Note: Employee login works on the same device where the owner added you (demo limitation).</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-emp-otp" class="screen">
+      <div class="onboard-container">
+        <button class="back-btn" data-back="screen-emp-login">&larr;</button>
+        <div class="onboard-logo small">
+          <h2>Verify OTP</h2>
+          <p class="subtitle" id="emp-otp-subtitle">Sent to +91 98765 43210</p>
+        </div>
+        <div class="onboard-form">
+          <div class="otp-inputs">
+            <input type="tel" maxlength="1" class="emp-otp-box" inputmode="numeric">
+            <input type="tel" maxlength="1" class="emp-otp-box" inputmode="numeric">
+            <input type="tel" maxlength="1" class="emp-otp-box" inputmode="numeric">
+            <input type="tel" maxlength="1" class="emp-otp-box" inputmode="numeric">
+          </div>
+          <button class="btn btn-primary btn-full" id="btn-emp-verify-otp" disabled>Verify</button>
+          <div id="emp-login-error" class="error-msg" style="display:none">
+            No account found for this phone. Please ask your employer to add you first.
+          </div>
+          <p class="resend-text">Didn't receive? <a href="#" id="emp-resend-otp">Resend OTP</a></p>
         </div>
       </div>
     </div>

@@ -77,11 +77,31 @@ btnStart.addEventListener('click',()=>{
 });
 
 // ===== EMPLOYEE LOGIN =====
-const empLoginPhone=$('#emp-login-phone'),btnEmpLogin=$('#btn-emp-login');
-empLoginPhone.addEventListener('input',()=>{empLoginPhone.value=empLoginPhone.value.replace(/\D/g,'');btnEmpLogin.disabled=empLoginPhone.value.length<10;$('#emp-login-error').style.display='none'});
-btnEmpLogin.addEventListener('click',()=>{
-  const ph=empLoginPhone.value;
-  const emp=state.employees.find(e=>e.phone===ph);
+const empLoginPhone=$('#emp-login-phone'),btnEmpSendOtp=$('#btn-emp-send-otp');
+let pendingEmpPhone='';
+empLoginPhone.addEventListener('input',()=>{empLoginPhone.value=empLoginPhone.value.replace(/\D/g,'');btnEmpSendOtp.disabled=empLoginPhone.value.length<10});
+btnEmpSendOtp.addEventListener('click',()=>{
+  pendingEmpPhone=empLoginPhone.value;
+  $('#emp-otp-subtitle').textContent='Sent to +91 '+pendingEmpPhone;
+  $('#emp-login-error').style.display='none';
+  $$('.emp-otp-box').forEach(b=>b.value='');
+  $('#btn-emp-verify-otp').disabled=true;
+  showScreen('screen-emp-otp');
+  setTimeout(()=>$$('.emp-otp-box')[0].focus(),100);
+});
+const empOtpBoxes=$$('.emp-otp-box');
+empOtpBoxes.forEach((b,i)=>{
+  b.addEventListener('input',()=>{
+    b.value=b.value.replace(/\D/g,'').slice(0,1);
+    if(b.value&&i<empOtpBoxes.length-1)empOtpBoxes[i+1].focus();
+    $('#btn-emp-verify-otp').disabled=!Array.from(empOtpBoxes).every(x=>x.value.length===1);
+  });
+  b.addEventListener('keydown',e=>{if(e.key==='Backspace'&&!b.value&&i>0)empOtpBoxes[i-1].focus()});
+});
+$('#emp-resend-otp').addEventListener('click',e=>{e.preventDefault();toast('OTP resent!')});
+$('#btn-emp-verify-otp').addEventListener('click',()=>{
+  // OTP "verified" (any 4 digits accepted in prototype). Now look up employee.
+  const emp=state.employees.find(e=>e.phone===pendingEmpPhone);
   if(!emp){$('#emp-login-error').style.display='';return}
   currentEmpId=emp.id;
   saveSession('employee',emp.id);
