@@ -20,6 +20,8 @@ a{color:var(--primary);text-decoration:none}
 .onboard-logo h1{font-size:30px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .onboard-logo h2{font-size:22px;font-weight:700}
 .tagline,.subtitle{color:var(--text-secondary);font-size:15px;margin-top:4px}
+.brand-by{font-size:12px;color:var(--text-tertiary);margin-top:-4px;letter-spacing:.3px}
+.brand-by strong{color:var(--primary);font-weight:700}
 .subtitle{font-size:14px}
 .onboard-form{display:flex;flex-direction:column;gap:16px}
 .onboard-footer{text-align:center;font-size:12px;color:var(--text-tertiary);margin-top:auto;padding-top:32px}
@@ -172,6 +174,7 @@ a{color:var(--primary);text-decoration:none}
 .task-card.done .task-title{text-decoration:line-through;color:var(--text-secondary)}
 .task-status-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);white-space:nowrap;text-transform:uppercase;letter-spacing:.3px}
 .task-status-badge.pending{background:var(--primary-light);color:var(--primary)}
+.task-status-badge.acknowledged{background:#fef3c7;color:#92400e}
 .task-status-badge.done,.task-status-badge.approved{background:var(--accent-light);color:#047857}
 .task-status-badge.overdue,.task-status-badge.rejected{background:var(--danger-light);color:#991b1b}
 .task-meta{display:flex;align-items:center;gap:12px;margin-top:8px;font-size:13px;color:var(--text-secondary)}
@@ -421,6 +424,81 @@ a{color:var(--primary);text-decoration:none}
 .offer-letter-preview .offer-table td{padding:6px 8px;border:1px solid var(--border);font-size:12px}
 .offer-letter-preview .offer-table td:first-child{font-weight:600;background:var(--surface);width:45%}
 .offer-letter-preview .offer-sign{margin-top:20px;padding-top:12px;border-top:1px solid var(--border)}
+
+/* Report Format Toggle */
+.report-format-toggle{display:inline-flex;background:var(--border-light);border-radius:var(--radius-full);padding:3px;margin-bottom:12px}
+.report-format-btn{padding:6px 16px;background:none;border:none;font-size:12px;font-weight:700;color:var(--text-secondary);border-radius:var(--radius-full);cursor:pointer;transition:all .15s;text-transform:uppercase;letter-spacing:.5px}
+.report-format-btn.active{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm)}
+
+/* F&F */
+.ff-header{padding:0 0 16px;border-bottom:1px solid var(--border-light);margin-bottom:16px}
+.ff-emp-name{font-size:18px;font-weight:700}
+.ff-exit-info{font-size:13px;color:var(--text-secondary);margin-top:4px}
+.ff-calc-card{background:var(--border-light);border-radius:var(--radius);padding:14px}
+.ff-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:14px}
+.ff-row.sub{font-size:13px;color:var(--text-secondary);padding-left:12px}
+.ff-row.total{border-top:1.5px solid var(--border);margin-top:6px;padding-top:10px;font-weight:700;font-size:16px;color:var(--primary)}
+
+/* Payout v2 */
+.payout-row-v2{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:10px}
+.payout-row-v2.paid{opacity:.65;background:var(--border-light)}
+.payout-row-head{display:flex;align-items:center;justify-content:space-between}
+.payout-check{display:flex;align-items:center;gap:10px;flex:1;cursor:pointer}
+.payout-check input{width:18px;height:18px;accent-color:var(--primary)}
+.payout-emp-name{font-weight:600;font-size:15px}
+.payout-toggle{background:none;border:1px solid var(--border);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;color:var(--text-secondary)}
+.payout-row-amount{display:flex;align-items:center;justify-content:space-between;margin-top:8px;gap:10px}
+.payout-final{font-size:18px;font-weight:700;color:var(--primary)}
+.payout-amount-input{border:none;background:transparent;font-size:18px;font-weight:700;color:var(--primary);width:120px;outline:none;border-bottom:1.5px dashed var(--border)}
+.payout-amount-input:focus{border-color:var(--primary)}
+.payout-amount-input:disabled{color:var(--text-tertiary);border-bottom-color:transparent}
+.payout-suggested{font-size:11px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.payout-paid-badge{font-size:11px;color:var(--accent);font-weight:700;letter-spacing:.5px}
+.payout-breakdown{display:none;font-size:12px;color:var(--text-secondary);margin-top:8px;padding:8px 10px;background:var(--border-light);border-radius:var(--radius-sm);line-height:1.5}
+.payout-breakdown.open{display:block}
+
+/* Policy Chips */
+.policy-chip{display:inline-block;padding:6px 12px;border-radius:var(--radius-full);font-size:12px;font-weight:600}
+.policy-chip.policy-ok{background:var(--accent-light);color:#047857}
+.policy-chip.policy-bad{background:#fef3c7;color:#92400e;border:1px solid #fbbf24}
+.policy-chip-mini{display:inline-block;padding:2px 8px;border-radius:var(--radius-full);font-size:10px;font-weight:700;margin-left:4px;text-transform:uppercase;letter-spacing:.3px}
+.policy-chip-mini.policy-ok{background:var(--accent-light);color:#047857}
+.policy-chip-mini.policy-bad{background:#fef3c7;color:#92400e}
+
+/* Attendance Action Bar */
+.att-action-bar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;gap:12px;background:var(--surface);border-bottom:1px solid var(--border-light)}
+.att-summary-pill{font-size:13px;font-weight:600;color:var(--text-secondary)}
+.weekoff-banner{display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);color:#1e40af;font-size:13px;font-weight:600;border-bottom:1px solid var(--border-light)}
+.att-row.weekoff{opacity:.5;pointer-events:none}
+.att-row.weekoff::after{content:'WEEKLY OFF';font-size:10px;font-weight:700;color:var(--text-tertiary);margin-left:auto}
+
+/* Daily Home — Day Cards */
+.day-card{background:var(--surface);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow-sm);border:1px solid var(--border-light);margin-bottom:12px}
+.day-card-label{font-size:11px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.yesterday-card{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border-color:#c7d2fe}
+.day-card-text{font-size:15px;font-weight:600;color:var(--text);line-height:1.4}
+.today-card{padding:8px 8px 4px}
+.action-row{display:flex;align-items:center;gap:12px;width:100%;padding:14px 12px;background:none;border:none;border-bottom:1px solid var(--border-light);cursor:pointer;text-align:left;font:inherit;color:var(--text)}
+.action-row:last-child{border-bottom:none}
+.action-row:active{background:var(--border-light);border-radius:var(--radius-sm)}
+.action-row-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.action-row-icon.att-icon{background:#eef2ff;color:var(--primary)}
+.action-row-icon.leave-icon{background:#fef3c7;color:var(--warning)}
+.action-row-icon.task-icon{background:#fee2e2;color:var(--danger)}
+.action-row-text{flex:1;font-size:14px;font-weight:600;min-width:0}
+.action-row-arrow{font-size:22px;color:var(--text-tertiary);font-weight:300}
+
+/* Pricing Banner */
+.pricing-banner{display:flex;align-items:center;gap:12px;padding:14px 16px;background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fbbf24;border-radius:var(--radius);margin-bottom:16px}
+.pricing-banner-icon{font-size:24px;flex-shrink:0}
+.pricing-banner-title{font-size:14px;font-weight:700;color:#92400e;margin-bottom:2px}
+.pricing-banner-desc{font-size:12px;color:#78350f;line-height:1.4}
+
+/* Weekday Chips */
+.weekday-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.weekday-chip{padding:8px 12px;border:1.5px solid var(--border);background:var(--surface);border-radius:var(--radius-full);font-size:13px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:all .15s;min-width:48px}
+.weekday-chip.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.weekday-chip:active{transform:scale(.95)}
 
 /* Offer Letter Attachment Card */
 .offer-attached-card{display:flex;align-items:center;gap:14px;padding:16px;background:var(--accent-light);border:1.5px solid var(--accent);border-radius:var(--radius)}

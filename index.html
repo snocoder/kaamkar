@@ -19,7 +19,8 @@
         <div class="onboard-logo">
           <div class="logo-icon">W</div>
           <h1>WorkMitra</h1>
-          <p class="tagline">Run your business, not paperwork</p>
+          <p class="brand-by">by <strong>WorkIndia</strong></p>
+          <p class="tagline">Hire on WorkIndia. Manage on WorkMitra.</p>
         </div>
         <div class="role-cards">
           <button class="role-card" id="role-owner">
@@ -90,7 +91,33 @@
           <input type="text" id="business-name" class="text-input" placeholder="e.g. Sharma Electronics">
           <label class="input-label">Your Name</label>
           <input type="text" id="owner-name" class="text-input" placeholder="e.g. Rajesh Sharma">
-          <button class="btn btn-primary btn-full" id="btn-start" disabled>Start Using WorkMitra</button>
+          <button class="btn btn-primary btn-full" id="btn-business-next" disabled>Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-onboard-policy" class="screen">
+      <div class="onboard-container">
+        <button class="back-btn" data-back="screen-onboard-business">&larr;</button>
+        <div class="onboard-logo small">
+          <h2>Set Workforce Policy</h2>
+          <p class="subtitle">You can change these later</p>
+        </div>
+        <div class="onboard-form">
+          <label class="input-label">Weekly Off Days</label>
+          <div class="weekday-chips" id="onboard-weekoff-chips">
+            <button type="button" class="weekday-chip active" data-dow="0">Sun</button>
+            <button type="button" class="weekday-chip" data-dow="1">Mon</button>
+            <button type="button" class="weekday-chip" data-dow="2">Tue</button>
+            <button type="button" class="weekday-chip" data-dow="3">Wed</button>
+            <button type="button" class="weekday-chip" data-dow="4">Thu</button>
+            <button type="button" class="weekday-chip" data-dow="5">Fri</button>
+            <button type="button" class="weekday-chip" data-dow="6">Sat</button>
+          </div>
+          <label class="input-label">Max Paid Leaves per Employee per Month</label>
+          <input type="number" id="onboard-leave-policy" class="text-input" value="2" min="0" max="31">
+          <p style="font-size:12px;color:var(--text-tertiary);margin-top:-4px;line-height:1.5">App will flag leave requests that exceed this. You can still approve over-policy.</p>
+          <button class="btn btn-primary btn-full" id="btn-start">Start Using WorkMitra</button>
         </div>
       </div>
     </div>
@@ -175,9 +202,13 @@
             </div>
             <!-- Hidden date picker triggered by tapping date -->
             <input type="date" id="att-date-picker" class="hidden-date-picker">
-            <div class="attendance-progress">
-              <div class="progress-bar"><div class="progress-fill" id="att-progress-fill" style="width:0%"></div></div>
-              <span class="progress-text" id="att-progress-text">0 of 0 marked</span>
+            <div id="att-weekoff-banner" class="weekoff-banner" style="display:none">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Weekly off — all employees auto-marked
+            </div>
+            <div class="att-action-bar">
+              <span class="att-summary-pill" id="att-progress-text">All present</span>
+              <button class="btn btn-sm btn-outline" id="btn-mark-all-present">Mark all present</button>
             </div>
             <div id="attendance-list" class="attendance-list"></div>
           </div>
@@ -215,6 +246,7 @@
             <div class="task-filters">
               <button class="filter-chip active" data-filter="all">All</button>
               <button class="filter-chip" data-filter="pending">Pending</button>
+              <button class="filter-chip" data-filter="not-ack">Not Ack</button>
               <button class="filter-chip" data-filter="done">Done</button>
               <button class="filter-chip" data-filter="overdue">Overdue</button>
             </div>
@@ -226,11 +258,36 @@
         <!-- DASHBOARD TAB -->
         <div id="tab-reports" class="tab-panel active">
           <div class="reports-container">
-            <div class="summary-grid">
+            <!-- Yesterday Card -->
+            <div class="day-card yesterday-card" id="dash-yesterday">
+              <div class="day-card-label">Yesterday</div>
+              <div class="day-card-text" id="dash-yesterday-text">—</div>
+            </div>
+
+            <!-- Today Action Card -->
+            <div class="day-card today-card">
+              <div class="day-card-label">Today</div>
+              <button class="action-row" id="action-mark-attendance">
+                <span class="action-row-icon att-icon"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
+                <span class="action-row-text" id="action-att-text">Mark today's attendance</span>
+                <span class="action-row-arrow">›</span>
+              </button>
+              <button class="action-row" id="action-approve-leaves">
+                <span class="action-row-icon leave-icon"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                <span class="action-row-text" id="action-leave-text">No pending leaves</span>
+                <span class="action-row-arrow">›</span>
+              </button>
+              <button class="action-row" id="action-tasks-overdue">
+                <span class="action-row-icon task-icon"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+                <span class="action-row-text" id="action-task-text">No overdue tasks</span>
+                <span class="action-row-arrow">›</span>
+              </button>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="summary-grid" style="margin-top:16px">
               <div class="summary-card clickable" id="dash-card-employees"><span class="summary-number" id="summary-employees">0</span><span class="summary-label">Employees</span></div>
-              <div class="summary-card clickable" id="dash-card-present"><span class="summary-number" id="summary-present">0</span><span class="summary-label">Present Today</span></div>
               <div class="summary-card clickable" id="dash-card-pending"><span class="summary-number" id="summary-tasks-pending">0</span><span class="summary-label">Tasks Pending</span></div>
-              <div class="summary-card clickable" id="dash-card-overdue"><span class="summary-number" id="summary-tasks-overdue">0</span><span class="summary-label">Overdue</span></div>
             </div>
 
             <!-- Upcoming Tasks -->
@@ -275,11 +332,11 @@
           </button>
           <button class="hamburger-item" id="hmenu-download-reports">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Download Reports
+            Reports
           </button>
           <button class="hamburger-item" id="hmenu-offer-letter">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8M8 17h5"/></svg>
-            Offer Letter
+            Appointment Letter
           </button>
           <button class="hamburger-item" id="hmenu-permissions">
             <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -309,12 +366,19 @@
       <div class="sheet-overlay"></div>
       <div class="sheet-content sheet-content-tall">
         <div class="sheet-handle"></div>
-        <h3 class="sheet-title">Download Reports</h3>
+        <h3 class="sheet-title">Reports</h3>
+        <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:12px">Inspection-ready records under Labour Codes 2025</p>
+        <div class="report-format-toggle">
+          <button class="report-format-btn active" data-format="csv">CSV</button>
+          <button class="report-format-btn" data-format="pdf">PDF</button>
+        </div>
         <div class="report-type-tabs">
           <button class="report-type-tab active" data-report="attendance">Attendance</button>
           <button class="report-type-tab" data-report="wages">Wages</button>
           <button class="report-type-tab" data-report="employees">Employees</button>
           <button class="report-type-tab" data-report="leaves">Leaves</button>
+          <button class="report-type-tab" data-report="advances">Advances</button>
+          <button class="report-type-tab" data-report="exits">Exits</button>
         </div>
         <div class="report-panel-container">
           <div id="report-attendance" class="report-panel active">
@@ -362,7 +426,25 @@
               <select id="leave-report-emp" class="text-input compact select-input"><option value="all">All Employees</option></select>
               <button class="btn btn-primary btn-full" id="btn-download-leave-report">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download Leave Summary
+                Download Leave Register
+              </button>
+            </div>
+          </div>
+          <div id="report-advances" class="report-panel">
+            <div class="report-filters-card">
+              <p class="report-desc">Advance ledger across all employees with date, amount, settlement status.</p>
+              <button class="btn btn-primary btn-full" id="btn-download-advance-report">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Advance Ledger
+              </button>
+            </div>
+          </div>
+          <div id="report-exits" class="report-panel">
+            <div class="report-filters-card">
+              <p class="report-desc">Exit register: exit date, reason, F&F amount and status.</p>
+              <button class="btn btn-primary btn-full" id="btn-download-exit-report">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download Exit Register
               </button>
             </div>
           </div>
@@ -406,6 +488,7 @@
             <div class="task-filters">
               <button class="filter-chip active" data-emp-task-filter="all">All</button>
               <button class="filter-chip" data-emp-task-filter="pending">Pending</button>
+              <button class="filter-chip" data-emp-task-filter="acknowledged">Acknowledged</button>
               <button class="filter-chip" data-emp-task-filter="done">Done</button>
               <button class="filter-chip" data-emp-task-filter="overdue">Overdue</button>
             </div>
@@ -461,9 +544,13 @@
             <button class="date-nav-btn" id="hr-att-next-day">&rarr;</button>
           </div>
           <input type="date" id="hr-att-date-picker" class="hidden-date-picker">
-          <div class="attendance-progress">
-            <div class="progress-bar"><div class="progress-fill" id="hr-att-progress-fill" style="width:0%"></div></div>
-            <span class="progress-text" id="hr-att-progress-text">0 of 0 marked</span>
+          <div id="hr-att-weekoff-banner" class="weekoff-banner" style="display:none">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Weekly off — auto-marked
+          </div>
+          <div class="att-action-bar">
+            <span class="att-summary-pill" id="hr-att-progress-text">All present</span>
+            <button class="btn btn-sm btn-outline" id="btn-hr-mark-all-present">Mark all present</button>
           </div>
           <div id="hr-attendance-list" class="attendance-list"></div>
         </div>
@@ -684,6 +771,28 @@
         <div class="sheet-handle"></div>
         <h3 class="sheet-title">Business Settings</h3>
         <div class="settings-body">
+          <div class="pricing-banner">
+            <div class="pricing-banner-icon">🎉</div>
+            <div>
+              <div class="pricing-banner-title">Free during Early Access</div>
+              <div class="pricing-banner-desc">Paid plan from 1 Aug 2026. Early users get <strong>50% off first year</strong>.</div>
+            </div>
+          </div>
+          <div class="settings-group">
+            <h4>Workforce Policy</h4>
+            <label class="input-label">Weekly Off Days</label>
+            <div class="weekday-chips" id="settings-weekoff-chips">
+              <button type="button" class="weekday-chip" data-dow="0">Sun</button>
+              <button type="button" class="weekday-chip" data-dow="1">Mon</button>
+              <button type="button" class="weekday-chip" data-dow="2">Tue</button>
+              <button type="button" class="weekday-chip" data-dow="3">Wed</button>
+              <button type="button" class="weekday-chip" data-dow="4">Thu</button>
+              <button type="button" class="weekday-chip" data-dow="5">Fri</button>
+              <button type="button" class="weekday-chip" data-dow="6">Sat</button>
+            </div>
+            <label class="input-label">Max Paid Leaves per Employee per Month</label>
+            <input type="number" id="settings-leave-policy" class="text-input" min="0" max="31" placeholder="e.g. 2">
+          </div>
           <div class="settings-group">
             <h4>Business Information</h4>
             <label class="input-label">Business Name</label>
@@ -762,6 +871,40 @@
       </div>
     </div>
 
+    <!-- Record Advance Sheet -->
+    <div id="sheet-advance" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Record Advance</h3>
+        <form id="form-advance" class="sheet-form">
+          <input type="hidden" id="advance-emp-id">
+          <label class="input-label">Employee</label>
+          <input type="text" id="advance-emp-name" class="text-input" disabled>
+          <label class="input-label">Date</label>
+          <input type="date" id="advance-date" class="text-input">
+          <label class="input-label">Amount (₹) <span class="required">*</span></label>
+          <input type="number" id="advance-amount" class="text-input" inputmode="numeric" placeholder="e.g. 2000">
+          <label class="input-label">Note (optional)</label>
+          <input type="text" id="advance-note" class="text-input" placeholder="e.g. medical emergency">
+          <div class="sheet-actions">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-advance">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Advance</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Full & Final Sheet -->
+    <div id="sheet-ff" class="bottom-sheet">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content sheet-content-tall">
+        <div class="sheet-handle"></div>
+        <h3 class="sheet-title">Full & Final Settlement</h3>
+        <div id="ff-body"></div>
+      </div>
+    </div>
+
     <!-- Employee Exit Sheet -->
     <div id="sheet-emp-exit" class="bottom-sheet">
       <div class="sheet-overlay"></div>
@@ -792,7 +935,7 @@
       <div class="sheet-overlay"></div>
       <div class="sheet-content sheet-content-tall">
         <div class="sheet-handle"></div>
-        <h3 class="sheet-title">Offer Letter</h3>
+        <h3 class="sheet-title">Appointment Letter</h3>
         <div id="offer-letter-body"></div>
       </div>
     </div>
@@ -802,8 +945,8 @@
       <div class="sheet-overlay"></div>
       <div class="sheet-content sheet-content-tall">
         <div class="sheet-handle"></div>
-        <h3 class="sheet-title">Generate Offer Letter</h3>
-        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Generate an offer letter for a candidate. Share it before they join. Attach to employee profile once they do.</p>
+        <h3 class="sheet-title">Generate Appointment Letter</h3>
+        <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">Labour Code compliant template. Share with candidate before they join. Auto-attached if generated from employee profile.</p>
 
         <div id="offer-gen-form">
           <label class="input-label">Candidate Name <span class="required">*</span></label>
@@ -821,8 +964,17 @@
           <label class="input-label">Work Location</label>
           <input type="text" id="offergen-location" class="text-input" placeholder="e.g. Pune, Maharashtra">
 
+          <label class="input-label">Working Hours</label>
+          <input type="text" id="offergen-hours" class="text-input" value="9:00 AM – 6:00 PM" placeholder="e.g. 9 AM to 6 PM">
+
+          <label class="input-label">Weekly Off</label>
+          <input type="text" id="offergen-weekoff" class="text-input" placeholder="e.g. Sunday">
+
+          <label class="input-label">Notice Period</label>
+          <input type="text" id="offergen-notice" class="text-input" value="30 days" placeholder="e.g. 30 days">
+
           <label class="input-label">Additional Terms <span style="font-weight:400;text-transform:none;font-size:11px">(optional)</span></label>
-          <textarea id="offergen-terms" class="text-input" rows="2" placeholder="e.g. 3-month probation period, 6-day work week"></textarea>
+          <textarea id="offergen-terms" class="text-input" rows="2" placeholder="e.g. 3-month probation period"></textarea>
 
           <div class="sheet-actions">
             <button type="button" class="btn btn-ghost" id="btn-offergen-cancel">Cancel</button>
